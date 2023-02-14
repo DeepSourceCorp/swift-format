@@ -575,7 +575,7 @@ fileprivate final class TokenStreamCreator: SyntaxVisitor {
     return .visitChildren
   }
 
-  override func visit(_ node: IfExprSyntax) -> SyntaxVisitorContinueKind {
+  override func visit(_ node: IfStmtSyntax) -> SyntaxVisitorContinueKind {
     // There may be a consistent breaking group around this node, see `CodeBlockItemSyntax`. This
     // group is necessary so that breaks around and inside of the conditions aren't forced to break
     // when the if-stmt spans multiple lines.
@@ -612,7 +612,7 @@ fileprivate final class TokenStreamCreator: SyntaxVisitor {
         tokenAfterElse.hasPrecedingLineComment
       {
         after(node.elseKeyword, tokens: .break(.same, size: 1))
-      } else if let elseBody = node.elseBody, elseBody.is(IfExprSyntax.self) {
+      } else if let elseBody = node.elseBody, elseBody.is(IfStmtSyntax.self) {
         after(node.elseKeyword, tokens: .space)
       }
     }
@@ -783,7 +783,7 @@ fileprivate final class TokenStreamCreator: SyntaxVisitor {
     return .visitChildren
   }
 
-  override func visit(_ node: SwitchExprSyntax) -> SyntaxVisitorContinueKind {
+  override func visit(_ node: SwitchStmtSyntax) -> SyntaxVisitorContinueKind {
     before(node.switchKeyword, tokens: .open)
     after(node.switchKeyword, tokens: .space)
     before(node.leftBrace, tokens: .break(.reset))

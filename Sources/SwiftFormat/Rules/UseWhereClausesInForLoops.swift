@@ -72,6 +72,13 @@ public final class UseWhereClausesInForLoops: SyntaxFormatRule {
       default:
         return forInStmt
       }
+      diagnose(.useWhereInsteadOfIf, on: ifStmt)
+      return updateWithWhereCondition(
+        node: forInStmt,
+        condition: condition,
+        statements: ifStmt.body.statements
+      )
+
     case .guardStmt(let guardStmt)
     where guardStmt.conditions.count == 1
       && guardStmt.body.statements.count == 1
