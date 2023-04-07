@@ -145,6 +145,7 @@ let package = Package(
   targets: targets
 )
 
+<<<<<<< HEAD
 func swiftSyntaxDependencies(_ names: [String]) -> [Target.Dependency] {
   if buildDynamicSwiftSyntaxLibrary {
     return [.product(name: "_SwiftSyntaxDynamic", package: "swift-syntax")]
@@ -211,4 +212,30 @@ var swiftformatLinkSettings: [LinkerSetting] {
   } else {
     return []
   }
+=======
+// MARK: Dependencies
+
+if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
+  // Building standalone.
+  package.dependencies += [
+    .package(
+      url: "https://github.com/apple/swift-argument-parser.git",
+      Version("1.0.1")..<Version("1.2.0")
+    ),
+    .package(
+      url: "https://github.com/apple/swift-syntax.git",
+      from: "508.0.0"
+    ),
+    .package(
+      url: "https://github.com/apple/swift-tools-support-core.git",
+      from: "0.5.0"
+    ),
+  ]
+} else {
+  package.dependencies += [
+    .package(path: "../swift-argument-parser"),
+    .package(path: "../swift-syntax"),
+    .package(path: "../swift-tools-support-core"),
+  ]
+>>>>>>> f0ad11e (Update package dependencies for 508.0.0.)
 }
