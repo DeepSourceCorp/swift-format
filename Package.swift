@@ -49,15 +49,6 @@ var targets: [Target] = [
       ]),
     exclude: ["CMakeLists.txt"]
   ),
-  .target(
-    name: "_SwiftFormatTestSupport",
-    dependencies: [
-      "SwiftFormat"
-    ]
-      + swiftSyntaxDependencies([
-        "SwiftOperators", "SwiftParser", "SwiftParserDiagnostics", "SwiftSyntax", "SwiftSyntaxBuilder",
-      ])
-  ),
   .plugin(
     name: "Format Source Code",
     capability: .command(
@@ -99,22 +90,6 @@ var targets: [Target] = [
     ] + swiftSyntaxDependencies(["SwiftParser", "SwiftSyntax"]),
     exclude: ["CMakeLists.txt"],
     linkerSettings: swiftformatLinkSettings
-  ),
-
-  .testTarget(
-    name: "SwiftFormatPerformanceTests",
-    dependencies: [
-      "SwiftFormat",
-      "_SwiftFormatTestSupport",
-    ] + swiftSyntaxDependencies(["SwiftParser", "SwiftSyntax"])
-  ),
-  .testTarget(
-    name: "SwiftFormatTests",
-    dependencies: [
-      "SwiftFormat",
-      "_SwiftFormatTestSupport",
-      .product(name: "Markdown", package: "swift-markdown"),
-    ] + swiftSyntaxDependencies(["SwiftOperators", "SwiftParser", "SwiftSyntax", "SwiftSyntaxBuilder"])
   ),
 ]
 
