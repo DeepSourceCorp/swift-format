@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class ClassDeclTests: PrettyPrintTestCase {
   func testBasicClassDeclarations() {
@@ -228,7 +240,7 @@ final class ClassDeclTests: PrettyPrintTestCase {
 
   func testClassWhereClause_lineBreakAfterGenericWhereClause() {
     let input =
-    """
+      """
       class MyClass<S, T> where S: Collection {
         let A: Int
         let B: Double
@@ -244,7 +256,7 @@ final class ClassDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       class MyClass<S, T> where S: Collection {
         let A: Int
         let B: Double
@@ -304,7 +316,7 @@ final class ClassDeclTests: PrettyPrintTestCase {
 
   func testClassWhereClauseWithInheritance_lineBreakAfterGenericWhereClause() {
     let input =
-    """
+      """
       class MyClass<S, T>: SuperOne where S: Collection {
         let A: Int
         let B: Double
@@ -320,7 +332,7 @@ final class ClassDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       class MyClass<S, T>: SuperOne where S: Collection {
         let A: Int
         let B: Double
@@ -431,7 +443,7 @@ final class ClassDeclTests: PrettyPrintTestCase {
 
   func testClassFullWrap_lineBreakAfterGenericWhereClause() {
     let input =
-    """
+      """
       public class MyContainer<BaseCollection, SecondCollection>: MyContainerSuperclass, MyContainerProtocol, SomeoneElsesContainerProtocol, SomeFrameworkContainerProtocol where BaseCollection: Collection, BaseCollection: P, BaseCollection.Element: Equatable, BaseCollection.Element: SomeOtherProtocol {
         let A: Int
         let B: Double
@@ -440,7 +452,7 @@ final class ClassDeclTests: PrettyPrintTestCase {
 
     let expected =
 
-    """
+      """
       public class MyContainer<
         BaseCollection, SecondCollection
       >: MyContainerSuperclass, MyContainerProtocol,

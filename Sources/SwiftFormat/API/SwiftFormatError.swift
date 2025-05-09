@@ -10,10 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
 import SwiftSyntax
 
 /// Errors that can be thrown by the `SwiftFormatter` and `SwiftLinter` APIs.
-public enum SwiftFormatError: Error {
+public enum SwiftFormatError: LocalizedError {
 
   /// The requested file was not readable or it did not exist.
   case fileNotReadable
@@ -23,4 +24,34 @@ public enum SwiftFormatError: Error {
 
   /// The file contains invalid or unrecognized Swift syntax and cannot be handled safely.
   case fileContainsInvalidSyntax
+
+  /// The requested experimental feature name was not recognized by the parser.
+  case unrecognizedExperimentalFeature(String)
+
+  /// An error happened while dumping the tool's configuration.
+  case configurationDumpFailed(String)
+
+  /// The provided configuration version is not supported by this version of the formatter.
+  case unsupportedConfigurationVersion(Int, highestSupported: Int)
+
+  public var errorDescription: String? {
+    switch self {
+    case .fileNotReadable:
+      return "file is not readable or does not exist"
+    case .isDirectory:
+      return "requested path is a directory, not a file"
+    case .fileContainsInvalidSyntax:
+      return "file contains invalid Swift syntax"
+    case .unrecognizedExperimentalFeature(let name):
+      return "experimental feature '\(name)' was not recognized by the Swift parser"
+    case .configurationDumpFailed(let message):
+      return "dumping configuration failed: \(message)"
+    case .unsupportedConfigurationVersion(let version, let highestSupported):
+      return
+        "This version of the formatter does not support configuration version \(version). The highest supported version is \(highestSupported)."
+    }
+  }
 }
+
+extension SwiftFormatError: Equatable {}
+extension SwiftFormatError: Hashable {}

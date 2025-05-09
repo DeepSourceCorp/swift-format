@@ -13,9 +13,9 @@
 import SwiftSyntax
 
 /// Imports must be lexicographically ordered and logically grouped at the top of each source file.
-/// The order of the import groups is 1) regular imports, 2) declaration imports, and 3) @testable
-/// imports. These groups are separated by a single blank line. Blank lines in between the import
-/// declarations are removed.
+/// The order of the import groups is 1) regular imports, 2) declaration imports, 3) @_implementationOnly
+/// imports, and 4) @testable imports. These groups are separated by a single blank line. Blank lines in
+/// between the import declarations are removed.
 ///
 /// Lint: If an import appears anywhere other than the beginning of the file it resides in,
 ///       not lexicographically ordered, or  not in the appropriate import group, a lint error is
@@ -34,6 +34,7 @@ public final class OrderedImports: SyntaxFormatRule {
 
     var regularImports: [Line] = []
     var declImports: [Line] = []
+    var implementationOnlyImports: [Line] = []
     var testableImports: [Line] = []
     var codeBlocks: [Line] = []
     var fileHeader: [Line] = []
@@ -52,14 +53,23 @@ public final class OrderedImports: SyntaxFormatRule {
 
       regularImports = formatImports(regularImports)
       declImports = formatImports(declImports)
+      implementationOnlyImports = formatImports(implementationOnlyImports)
       testableImports = formatImports(testableImports)
       formatCodeblocks(&codeBlocks)
 
-      let joined = joinLines(fileHeader, regularImports, declImports, testableImports, codeBlocks)
+      let joined = joinLines(
+        fileHeader,
+        regularImports,
+        declImports,
+        implementationOnlyImports,
+        testableImports,
+        codeBlocks
+      )
       formattedLines.append(contentsOf: joined)
 
       regularImports = []
       declImports = []
+      implementationOnlyImports = []
       testableImports = []
       codeBlocks = []
       fileHeader = []
@@ -86,7 +96,15 @@ public final class OrderedImports: SyntaxFormatRule {
       if atStartOfFile {
         switch line.type {
         case .comment:
-          commentBuffer.append(line)
+          if line.description.contains(IgnoreDirective.file.description) {
+            // If the file-level ignore directive is included in the comments of the import statements,
+            // consider the comments before the file-level ignore directive as part of the fileHeader.
+            fileHeader.append(contentsOf: commentBuffer)
+            fileHeader.append(line)
+            commentBuffer = []
+          } else {
+            commentBuffer.append(line)
+          }
           continue
 
         case .blankLine:
@@ -105,6 +123,11 @@ public final class OrderedImports: SyntaxFormatRule {
       case .regularImport:
         regularImports.append(contentsOf: commentBuffer)
         regularImports.append(line)
+        commentBuffer = []
+
+      case .implementationOnlyImport:
+        implementationOnlyImports.append(contentsOf: commentBuffer)
+        implementationOnlyImports.append(line)
         commentBuffer = []
 
       case .testableImport:
@@ -131,10 +154,8 @@ public final class OrderedImports: SyntaxFormatRule {
       formatAndAppend(linesSection: lines[lastSliceStartIndex..<lines.endIndex])
     }
 
-    let newNode = node.with(
-      \.statements, 
-      CodeBlockItemListSyntax(convertToCodeBlockItems(lines: formattedLines))
-    )
+    var newNode = node
+    newNode.statements = CodeBlockItemListSyntax(convertToCodeBlockItems(lines: formattedLines))
     return newNode
   }
 
@@ -142,6 +163,7 @@ public final class OrderedImports: SyntaxFormatRule {
   /// statements do not appear at the top of the file.
   private func checkGrouping<C: Collection>(_ lines: C) where C.Element == Line {
     var declGroup = false
+    var implementationOnlyGroup = false
     var testableGroup = false
     var codeGroup = false
 
@@ -151,6 +173,8 @@ public final class OrderedImports: SyntaxFormatRule {
       switch lineType {
       case .declImport:
         declGroup = true
+      case .implementationOnlyImport:
+        implementationOnlyGroup = true
       case .testableImport:
         testableGroup = true
       case .codeBlock:
@@ -160,7 +184,7 @@ public final class OrderedImports: SyntaxFormatRule {
 
       if codeGroup {
         switch lineType {
-        case .regularImport, .declImport, .testableImport:
+        case .regularImport, .declImport, .implementationOnlyImport, .testableImport:
           diagnose(.placeAtTopOfFile, on: line.firstToken)
         default: ()
         }
@@ -168,9 +192,21 @@ public final class OrderedImports: SyntaxFormatRule {
 
       if testableGroup {
         switch lineType {
+        case .regularImport, .declImport, .implementationOnlyImport:
+          diagnose(
+            .groupImports(before: lineType, after: LineType.testableImport),
+            on: line.firstToken
+          )
+        default: ()
+        }
+      }
+
+      if implementationOnlyGroup {
+        switch lineType {
         case .regularImport, .declImport:
           diagnose(
-            .groupImports(before: lineType, after: LineType.testableImport), on: line.firstToken
+            .groupImports(before: lineType, after: LineType.implementationOnlyImport),
+            on: line.firstToken
           )
         default: ()
         }
@@ -180,7 +216,8 @@ public final class OrderedImports: SyntaxFormatRule {
         switch lineType {
         case .regularImport:
           diagnose(
-            .groupImports(before: lineType, after: LineType.declImport), on: line.firstToken
+            .groupImports(before: lineType, after: LineType.declImport),
+            on: line.firstToken
           )
         default: ()
         }
@@ -200,7 +237,7 @@ public final class OrderedImports: SyntaxFormatRule {
 
     for line in imports {
       switch line.type {
-      case .regularImport, .declImport, .testableImport:
+      case .regularImport, .declImport, .implementationOnlyImport, .testableImport:
         let fullyQualifiedImport = line.fullyQualifiedImport
         // Check for duplicate imports and potentially remove them.
         if let previousMatchingImportIndex = visitedImports[fullyQualifiedImport] {
@@ -283,23 +320,19 @@ fileprivate func joinLines(_ inputLineLists: [Line]...) -> [Line] {
 /// This function transforms the statements in a CodeBlockItemListSyntax object into a list of Line
 /// objects. Blank lines and standalone comments are represented by their own Line object. Code with
 /// a trailing comment are represented together in the same Line.
-fileprivate func generateLines(codeBlockItemList: CodeBlockItemListSyntax, context: Context)
-  -> [Line]
-{
+fileprivate func generateLines(
+  codeBlockItemList: CodeBlockItemListSyntax,
+  context: Context
+) -> [Line] {
   var lines: [Line] = []
   var currentLine = Line()
-  var afterNewline = false
-  var isFirstBlock = true
 
   func appendNewLine() {
     lines.append(currentLine)
     currentLine = Line()
-    afterNewline = true  // Note: trailing line comments always come before any newlines.
   }
 
   for block in codeBlockItemList {
-    afterNewline = false
-
     for piece in block.leadingTrivia {
       switch piece {
       // Create new Line objects when we encounter newlines.
@@ -308,42 +341,40 @@ fileprivate func generateLines(codeBlockItemList: CodeBlockItemListSyntax, conte
           appendNewLine()
         }
       default:
-        if afterNewline || isFirstBlock {
-          currentLine.leadingTrivia.append(piece)  // This will be a standalone comment.
-        } else {
-          currentLine.trailingTrivia.append(piece)  // This will be a trailing line comment.
-        }
+        currentLine.leadingTrivia.append(piece)  // This will be a standalone comment.
       }
     }
 
     if block.item.is(ImportDeclSyntax.self) {
       // Always create a new `Line` for each import statement, so they can be reordered.
       if currentLine.syntaxNode != nil {
-        lines.append(currentLine)
-        currentLine = Line()
+        appendNewLine()
       }
-      let sortable = context.isRuleEnabled(OrderedImports.self, node: Syntax(block))
-      currentLine.syntaxNode = .importCodeBlock(block, sortable: sortable)
+      let sortable = context.shouldFormat(OrderedImports.self, node: Syntax(block))
+      var blockWithoutTrailingTrivia = block
+      blockWithoutTrailingTrivia.trailingTrivia = []
+      currentLine.syntaxNode = .importCodeBlock(blockWithoutTrailingTrivia, sortable: sortable)
     } else {
-      guard let syntaxNode = currentLine.syntaxNode else {
+      if let syntaxNode = currentLine.syntaxNode {
+        // Multiple code blocks can be merged, as long as there isn't an import statement.
+        switch syntaxNode {
+        case .importCodeBlock:
+          appendNewLine()
+          currentLine.syntaxNode = .nonImportCodeBlocks([block])
+        case .nonImportCodeBlocks(let existingCodeBlocks):
+          currentLine.syntaxNode = .nonImportCodeBlocks(existingCodeBlocks + [block])
+        }
+      } else {
         currentLine.syntaxNode = .nonImportCodeBlocks([block])
-        continue
-      }
-      // Multiple code blocks can be merged, as long as there isn't an import statement.
-      switch syntaxNode {
-      case .importCodeBlock:
-        lines.append(currentLine)
-        currentLine = Line()
-        currentLine.syntaxNode = .nonImportCodeBlocks([block])
-      case .nonImportCodeBlocks(let existingCodeBlocks):
-        currentLine.syntaxNode = .nonImportCodeBlocks(existingCodeBlocks + [block])
       }
     }
 
-    isFirstBlock = false
+    for piece in block.trailingTrivia {
+      currentLine.trailingTrivia.append(piece)  // This will be a trailing line comment.
+    }
   }
-  lines.append(currentLine)
 
+  lines.append(currentLine)
   return lines
 }
 
@@ -351,20 +382,18 @@ fileprivate func generateLines(codeBlockItemList: CodeBlockItemListSyntax, conte
 /// replacing the trivia appropriately to ensure comments appear in the right location.
 fileprivate func convertToCodeBlockItems(lines: [Line]) -> [CodeBlockItemSyntax] {
   var output: [CodeBlockItemSyntax] = []
-  var triviaBuffer: [TriviaPiece] = []
+  var pendingLeadingTrivia: [TriviaPiece] = []
 
   for line in lines {
-    triviaBuffer += line.leadingTrivia
+    pendingLeadingTrivia += line.leadingTrivia
 
     func append(codeBlockItem: CodeBlockItemSyntax) {
-      // Comments and newlines are always located in the leading trivia of an AST node, so we need
-      // not deal with trailing trivia.
       var codeBlockItem = codeBlockItem
-      codeBlockItem.leadingTrivia = Trivia(pieces: triviaBuffer)
+      codeBlockItem.leadingTrivia = Trivia(pieces: pendingLeadingTrivia)
+      codeBlockItem.trailingTrivia = Trivia(pieces: line.trailingTrivia)
       output.append(codeBlockItem)
 
-      triviaBuffer = []
-      triviaBuffer += line.trailingTrivia
+      pendingLeadingTrivia = []
     }
 
     if let syntaxNode = line.syntaxNode {
@@ -376,11 +405,11 @@ fileprivate func convertToCodeBlockItems(lines: [Line]) -> [CodeBlockItemSyntax]
       }
     }
 
-    // Merge multiple newlines together into a single trivia piece by updating it's N value.
-    if let lastPiece = triviaBuffer.last, case .newlines(let N) = lastPiece {
-      triviaBuffer[triviaBuffer.endIndex - 1] = TriviaPiece.newlines(N + 1)
+    // Merge multiple newlines together into a single trivia piece by updating its count.
+    if let lastPiece = pendingLeadingTrivia.last, case .newlines(let count) = lastPiece {
+      pendingLeadingTrivia[pendingLeadingTrivia.endIndex - 1] = .newlines(count + 1)
     } else {
-      triviaBuffer.append(TriviaPiece.newlines(1))
+      pendingLeadingTrivia.append(.newlines(1))
     }
   }
 
@@ -390,6 +419,7 @@ fileprivate func convertToCodeBlockItems(lines: [Line]) -> [CodeBlockItemSyntax]
 public enum LineType: CustomStringConvertible {
   case regularImport
   case declImport
+  case implementationOnlyImport
   case testableImport
   case codeBlock
   case comment
@@ -401,6 +431,8 @@ public enum LineType: CustomStringConvertible {
       return "regular"
     case .declImport:
       return "declaration"
+    case .implementationOnlyImport:
+      return "implementationOnly"
     case .testableImport:
       return "testable"
     case .codeBlock:
@@ -485,8 +517,9 @@ fileprivate class Line {
     // description includes all leading and trailing trivia. It would be unusual to have any
     // non-whitespace trivia on the components of the import. Trim off the leading trivia, where
     // comments could be, and trim whitespace that might be after the import.
-    return importDecl.with(\.leadingTrivia, []).description
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    var declForDescription = importDecl
+    declForDescription.leadingTrivia = []
+    return declForDescription.description.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   /// Returns the path that is imported by this line's import statement if it's an import statement.
@@ -514,11 +547,15 @@ fileprivate class Line {
 
   /// Returns a `LineType` the represents the type of import from the given import decl.
   private func importType(of importDecl: ImportDeclSyntax) -> LineType {
-    if let attr = importDecl.attributes.firstToken(viewMode: .sourceAccurate),
-      attr.tokenKind == .atSign,
-      attr.nextToken(viewMode: .sourceAccurate)?.text == "testable"
-    {
+
+    let importIdentifierTypes = importDecl.attributes.compactMap { $0.as(AttributeSyntax.self)?.attributeName }
+    let importAttributeNames = importIdentifierTypes.compactMap { $0.as(IdentifierTypeSyntax.self)?.name.text }
+
+    if importAttributeNames.contains("testable") {
       return .testableImport
+    }
+    if importAttributeNames.contains("_implementationOnly") {
+      return .implementationOnlyImport
     }
     if importDecl.importKindSpecifier != nil {
       return .declImport
@@ -527,8 +564,8 @@ fileprivate class Line {
   }
 }
 
-extension Line: CustomDebugStringConvertible {
-  var debugDescription: String {
+extension Line: CustomStringConvertible {
+  var description: String {
     var description = ""
     if !leadingTrivia.isEmpty {
       var newlinesCount = 0
@@ -570,17 +607,13 @@ extension Line: CustomDebugStringConvertible {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let placeAtTopOfFile: Finding.Message = "place imports at the top of the file"
+  fileprivate static let placeAtTopOfFile: Finding.Message = "place imports at the top of the file"
 
-  @_spi(Rules)
-  public static func groupImports(before: LineType, after: LineType) -> Finding.Message {
+  fileprivate static func groupImports(before: LineType, after: LineType) -> Finding.Message {
     "place \(before) imports before \(after) imports"
   }
 
-  @_spi(Rules)
-  public static let removeDuplicateImport: Finding.Message = "remove this duplicate import"
+  fileprivate static let removeDuplicateImport: Finding.Message = "remove this duplicate import"
 
-  @_spi(Rules)
-  public static let sortImports: Finding.Message = "sort import statements lexicographically"
+  fileprivate static let sortImports: Finding.Message = "sort import statements lexicographically"
 }

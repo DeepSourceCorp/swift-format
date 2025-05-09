@@ -46,7 +46,7 @@ public final class AllPublicDeclarationsHaveDocumentation: SyntaxLintRule {
 
   public override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
     diagnoseMissingDocComment(DeclSyntax(node), name: node.name.text, modifiers: node.modifiers)
-    return .skipChildren
+    return .visitChildren
   }
 
   public override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
@@ -57,7 +57,17 @@ public final class AllPublicDeclarationsHaveDocumentation: SyntaxLintRule {
 
   public override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
     diagnoseMissingDocComment(DeclSyntax(node), name: node.name.text, modifiers: node.modifiers)
-    return .skipChildren
+    return .visitChildren
+  }
+
+  public override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
+    diagnoseMissingDocComment(DeclSyntax(node), name: node.name.text, modifiers: node.modifiers)
+    return .visitChildren
+  }
+
+  public override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind {
+    diagnoseMissingDocComment(DeclSyntax(node), name: node.name.text, modifiers: node.modifiers)
+    return .visitChildren
   }
 
   public override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
@@ -73,11 +83,12 @@ public final class AllPublicDeclarationsHaveDocumentation: SyntaxLintRule {
   private func diagnoseMissingDocComment(
     _ decl: DeclSyntax,
     name: String,
-    modifiers: DeclModifierListSyntax?
+    modifiers: DeclModifierListSyntax
   ) {
     guard
       DocumentationCommentText(extractedFrom: decl.leadingTrivia) == nil,
-      let mods = modifiers, mods.has(modifier: "public") && !mods.has(modifier: "override")
+      modifiers.contains(anyOf: [.public]),
+      !modifiers.contains(anyOf: [.override])
     else {
       return
     }
@@ -87,8 +98,7 @@ public final class AllPublicDeclarationsHaveDocumentation: SyntaxLintRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func declRequiresComment(_ name: String) -> Finding.Message {
+  fileprivate static func declRequiresComment(_ name: String) -> Finding.Message {
     "add a documentation comment for '\(name)'"
   }
 }

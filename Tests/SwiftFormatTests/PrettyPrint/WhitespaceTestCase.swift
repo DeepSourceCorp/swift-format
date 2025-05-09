@@ -1,9 +1,20 @@
-import SwiftFormatConfiguration
-import SwiftSyntax
-import SwiftParser
-import XCTest
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
+import SwiftFormat
 @_spi(Testing) import SwiftFormat
+import SwiftParser
+import SwiftSyntax
+import XCTest
 @_spi(Testing) import _SwiftFormatTestSupport
 
 class WhitespaceTestCase: DiagnosingTestCase {
@@ -39,9 +50,14 @@ class WhitespaceTestCase: DiagnosingTestCase {
     let context = makeContext(
       sourceFileSyntax: sourceFileSyntax,
       configuration: configuration,
-      findingConsumer: { emittedFindings.append($0) })
+      selection: .infinite,
+      findingConsumer: { emittedFindings.append($0) }
+    )
     let linter = WhitespaceLinter(
-      user: markedText.textWithoutMarkers, formatted: expected, context: context)
+      user: markedText.textWithoutMarkers,
+      formatted: expected,
+      context: context
+    )
     linter.lint()
 
     assertFindings(
@@ -50,6 +66,7 @@ class WhitespaceTestCase: DiagnosingTestCase {
       emittedFindings: emittedFindings,
       context: context,
       file: file,
-      line: line)
+      line: line
+    )
   }
 }

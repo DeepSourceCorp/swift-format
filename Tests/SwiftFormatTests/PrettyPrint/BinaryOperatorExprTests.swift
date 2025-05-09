@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class BinaryOperatorExprTests: PrettyPrintTestCase {
   func testNonRangeFormationOperatorsAreSurroundedByBreaks() {
@@ -53,7 +65,11 @@ final class BinaryOperatorExprTests: PrettyPrintTestCase {
     var configuration = Configuration.forTesting
     configuration.spacesAroundRangeFormationOperators = false
     assertPrettyPrintEqual(
-      input: input, expected: expected, linelength: 80, configuration: configuration)
+      input: input,
+      expected: expected,
+      linelength: 80,
+      configuration: configuration
+    )
   }
 
   func testRangeFormationOperatorCompaction_spacesAroundRangeFormation() {
@@ -81,7 +97,11 @@ final class BinaryOperatorExprTests: PrettyPrintTestCase {
     var configuration = Configuration.forTesting
     configuration.spacesAroundRangeFormationOperators = true
     assertPrettyPrintEqual(
-      input: input, expected: expected, linelength: 80, configuration: configuration)
+      input: input,
+      expected: expected,
+      linelength: 80,
+      configuration: configuration
+    )
   }
 
   func testRangeFormationOperatorsAreNotCompactedWhenFollowingAPostfixOperator() {

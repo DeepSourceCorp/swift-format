@@ -24,16 +24,21 @@ public final class NoEmptyTrailingClosureParentheses: SyntaxFormatRule {
   public override func visit(_ node: FunctionCallExprSyntax) -> ExprSyntax {
     guard node.arguments.count == 0 else { return super.visit(node) }
 
-    guard let trailingClosure = node.trailingClosure,
-      node.arguments.isEmpty && node.leftParen != nil else
-    {
+    guard
+      let trailingClosure = node.trailingClosure,
+      let leftParen = node.leftParen,
+      let rightParen = node.rightParen,
+      node.arguments.isEmpty,
+      !leftParen.trailingTrivia.hasAnyComments,
+      !rightParen.leadingTrivia.hasAnyComments
+    else {
       return super.visit(node)
     }
     guard let name = node.calledExpression.lastToken(viewMode: .sourceAccurate) else {
       return super.visit(node)
     }
 
-    diagnose(.removeEmptyTrailingParentheses(name: "\(name.trimmedDescription)"), on: node)
+    diagnose(.removeEmptyTrailingParentheses(name: "\(name.trimmedDescription)"), on: leftParen)
 
     // Need to visit `calledExpression` before creating a new node so that the location data (column
     // and line numbers) is available.
@@ -52,8 +57,7 @@ public final class NoEmptyTrailingClosureParentheses: SyntaxFormatRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func removeEmptyTrailingParentheses(name: String) -> Finding.Message {
+  fileprivate static func removeEmptyTrailingParentheses(name: String) -> Finding.Message {
     "remove the empty parentheses following '\(name)'"
   }
 }

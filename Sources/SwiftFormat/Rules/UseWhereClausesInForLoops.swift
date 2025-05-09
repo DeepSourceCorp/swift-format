@@ -31,7 +31,7 @@ public final class UseWhereClausesInForLoops: SyntaxFormatRule {
     let firstStatement = node.body.statements.first!
 
     // Ignore for-loops with a `where` clause already.
-    // FIXME: Create an `&&` expression with both conditions?
+    // TODO: Create an `&&` expression with both conditions?
     guard node.whereClause == nil else { return StmtSyntax(node) }
 
     // Match:
@@ -55,7 +55,7 @@ public final class UseWhereClausesInForLoops: SyntaxFormatRule {
     case .expressionStmt(let exprStmt):
       switch Syntax(exprStmt.expression).as(SyntaxEnum.self) {
       case .ifExpr(let ifExpr)
-        where ifExpr.conditions.count == 1
+      where ifExpr.conditions.count == 1
         && ifExpr.elseKeyword == nil
         && forInStmt.body.statements.count == 1:
         // Extract the condition of the IfExpr.
@@ -105,7 +105,8 @@ fileprivate func updateWithWhereCondition(
   if lastToken?.trailingTrivia.containsSpaces == false {
     whereLeadingTrivia = .spaces(1)
   }
-  let whereKeyword = TokenSyntax.keyword(.where,
+  let whereKeyword = TokenSyntax.keyword(
+    .where,
     leadingTrivia: whereLeadingTrivia,
     trailingTrivia: .spaces(1)
   )
@@ -115,16 +116,16 @@ fileprivate func updateWithWhereCondition(
   )
 
   // Replace the where clause and extract the body from the IfStmt.
-  let newBody = node.body.with(\.statements, statements)
-  return node.with(\.whereClause, whereClause).with(\.body, newBody)
+  var result = node
+  result.whereClause = whereClause
+  result.body.statements = statements
+  return result
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let useWhereInsteadOfIf: Finding.Message =
+  fileprivate static let useWhereInsteadOfIf: Finding.Message =
     "replace this 'if' statement with a 'where' clause"
 
-  @_spi(Rules)
-  public static let useWhereInsteadOfGuard: Finding.Message =
+  fileprivate static let useWhereInsteadOfGuard: Finding.Message =
     "replace this 'guard' statement with a 'where' clause"
 }

@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftFormatConfiguration
 import SwiftSyntax
 
 /// Assignment expressions must be their own statements.
 ///
 /// Assignment should not be used in an expression context that expects a `Void` value. For example,
-/// assigning a variable within a `return` statement existing a `Void` function is prohibited.
+/// assigning a variable within a `return` statement exiting a `Void` function is prohibited.
 ///
 /// Lint: If an assignment expression is found in a position other than a standalone statement, a
 ///       lint finding is emitted.
@@ -43,13 +42,13 @@ public final class NoAssignmentInExpressions: SyntaxFormatRule {
 
     for item in node {
       // Make sure to visit recursively so that any nested decls get processed first.
-      let newItem = visit(item)
+      let visitedItem = visit(item)
 
       // Rewrite any `return <assignment>` expressions as `<assignment><newline>return`.
-      switch newItem.item {
+      switch visitedItem.item {
       case .stmt(let stmt):
         guard
-          let returnStmt = stmt.as(ReturnStmtSyntax.self),
+          var returnStmt = stmt.as(ReturnStmtSyntax.self),
           let assignmentExpr = assignmentExpression(from: returnStmt)
         else {
           // Head to the default case where we just keep the original item.
@@ -58,25 +57,25 @@ public final class NoAssignmentInExpressions: SyntaxFormatRule {
 
         // Move the leading trivia from the `return` statement to the new assignment statement,
         // since that's a more sensible place than between the two.
-        newItems.append(
-          CodeBlockItemSyntax(
-            item: .expr(ExprSyntax(assignmentExpr)),
-            semicolon: nil
-          )
-          .with(
-            \.leadingTrivia,
-            (returnStmt.leadingTrivia) + (assignmentExpr.leadingTrivia))
-          .with(\.trailingTrivia, []))
-        newItems.append(
-          CodeBlockItemSyntax(
-            item: .stmt(StmtSyntax(returnStmt.with(\.expression, nil))),
-            semicolon: nil
-          )
-          .with(\.leadingTrivia, [.newlines(1)])
-          .with(\.trailingTrivia, returnStmt.trailingTrivia.withoutLeadingSpaces()))
+        var assignmentItem = CodeBlockItemSyntax(item: .expr(ExprSyntax(assignmentExpr)))
+        assignmentItem.leadingTrivia =
+          returnStmt.leadingTrivia
+          + returnStmt.returnKeyword.trailingTrivia.withoutLeadingSpaces()
+          + assignmentExpr.leadingTrivia
+        assignmentItem.trailingTrivia = []
+
+        let trailingTrivia = returnStmt.trailingTrivia
+        returnStmt.expression = nil
+        returnStmt.returnKeyword.trailingTrivia = []
+        var returnItem = CodeBlockItemSyntax(item: .stmt(StmtSyntax(returnStmt)))
+        returnItem.leadingTrivia = [.newlines(1)]
+        returnItem.trailingTrivia = trailingTrivia
+
+        newItems.append(assignmentItem)
+        newItems.append(returnItem)
 
       default:
-        newItems.append(newItem)
+        newItems.append(visitedItem)
       }
     }
 
@@ -121,8 +120,7 @@ public final class NoAssignmentInExpressions: SyntaxFormatRule {
   /// `CodeBlockItem` parent.
   private func isStandaloneAssignmentStatement(_ node: InfixOperatorExprSyntax) -> Bool {
     var node = Syntax(node)
-    while
-      let parent = node.parent,
+    while let parent = node.parent,
       parent.is(TryExprSyntax.self) || parent.is(AwaitExprSyntax.self)
     {
       node = parent
@@ -162,7 +160,6 @@ public final class NoAssignmentInExpressions: SyntaxFormatRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let moveAssignmentToOwnStatement: Finding.Message =
+  fileprivate static let moveAssignmentToOwnStatement: Finding.Message =
     "move this assignment expression into its own statement"
 }

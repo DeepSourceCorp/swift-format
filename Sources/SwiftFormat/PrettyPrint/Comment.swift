@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import SwiftFormatConfiguration
 import SwiftSyntax
 
 extension StringProtocol {
@@ -22,13 +21,27 @@ extension StringProtocol {
   /// - Returns: The string with trailing whitespace removed.
   func trimmingTrailingWhitespace() -> String {
     if isEmpty { return String() }
-    let scalars = unicodeScalars
-    var idx = scalars.index(before: scalars.endIndex)
-    while scalars[idx].properties.isWhitespace {
-      if idx == scalars.startIndex { return String() }
-      idx = scalars.index(before: idx)
+    let utf8Array = Array(utf8)
+    var idx = utf8Array.endIndex - 1
+    while utf8Array[idx].isWhitespace {
+      if idx == utf8Array.startIndex { return String() }
+      idx -= 1
     }
-    return String(String.UnicodeScalarView(scalars[...idx]))
+    return String(decoding: utf8Array[...idx], as: UTF8.self)
+  }
+}
+
+extension UTF8.CodeUnit {
+  /// Checks if the UTF-8 code unit represents a whitespace character.
+  ///
+  /// - Returns: `true` if the code unit represents a whitespace character, otherwise `false`.
+  var isWhitespace: Bool {
+    switch self {
+    case UInt8(ascii: " "), UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\r"), /*VT*/ 0x0B, /*FF*/ 0x0C:
+      return true
+    default:
+      return false
+    }
   }
 }
 
@@ -59,15 +72,18 @@ struct Comment {
   let kind: Kind
   var text: [String]
   var length: Int
+  // what was the leading indentation, if any, that preceded this comment?
+  var leadingIndent: Indent?
 
-  init(kind: Kind, text: String) {
+  init(kind: Kind, leadingIndent: Indent?, text: String) {
     self.kind = kind
+    self.leadingIndent = leadingIndent
 
     switch kind {
     case .line, .docLine:
-      self.text = [text.trimmingTrailingWhitespace()]
+      self.length = text.count
+      self.text = [text]
       self.text[0].removeFirst(kind.prefixLength)
-      self.length = self.text.reduce(0, { $0 + $1.count + kind.prefixLength + 1 })
 
     case .block, .docBlock:
       var fulltext: String = text
@@ -89,10 +105,30 @@ struct Comment {
   func print(indent: [Indent]) -> String {
     switch self.kind {
     case .line, .docLine:
-      let separator = "\n" + kind.prefix
-      return kind.prefix + self.text.joined(separator: separator)
+      let separator = "\n" + indent.indentation() + kind.prefix
+      let trimmedLines = self.text.map { $0.trimmingTrailingWhitespace() }
+      return kind.prefix + trimmedLines.joined(separator: separator)
     case .block, .docBlock:
       let separator = "\n"
+
+      // if all the lines after the first matching leadingIndent, replace that prefix with the
+      // current indentation level
+      if let leadingIndent {
+        let rest = self.text.dropFirst()
+
+        let hasLeading = rest.allSatisfy {
+          let result = $0.hasPrefix(leadingIndent.text) || $0.isEmpty
+          return result
+        }
+        if hasLeading, let first = self.text.first, !rest.isEmpty {
+          let restStr = rest.map {
+            let stripped = $0.dropFirst(leadingIndent.text.count)
+            return indent.indentation() + stripped
+          }.joined(separator: separator)
+          return kind.prefix + first + separator + restStr + "*/"
+        }
+      }
+
       return kind.prefix + self.text.joined(separator: separator) + "*/"
     }
   }

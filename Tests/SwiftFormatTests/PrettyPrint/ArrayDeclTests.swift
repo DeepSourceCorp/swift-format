@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftFormat
 import SwiftSyntax
 import _SwiftFormatTestSupport
@@ -54,15 +66,15 @@ final class ArrayDeclTests: PrettyPrintTestCase {
       ]
 
       """
-      // Ideally, this array would be left on 1 line without a trailing comma. We don't know if the
-      // comma is required when calculating the length of array elements, so the comma's length is
-      // always added to last element and that 1 character causes the newlines inside of the array.
-      + """
-      let a = [
-        11111111, 2222222, 33333333, 444444,
-      ]
+        // Ideally, this array would be left on 1 line without a trailing comma. We don't know if the
+        // comma is required when calculating the length of array elements, so the comma's length is
+        // always added to last element and that 1 character causes the newlines inside of the array.
+        + """
+        let a = [
+          11111111, 2222222, 33333333, 444444,
+        ]
 
-      """
+        """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 45)
   }
@@ -278,15 +290,15 @@ final class ArrayDeclTests: PrettyPrintTestCase {
       ]
 
       """
-      // Ideally, this array would be left on 1 line without a trailing comma. We don't know if the
-      // comma is required when calculating the length of array elements, so the comma's length is
-      // always added to last element and that 1 character causes the newlines inside of the array.
-      + """
-      a = [
-        ("az", "by"), ("cf", "de"),
-      ]
+        // Ideally, this array would be left on 1 line without a trailing comma. We don't know if the
+        // comma is required when calculating the length of array elements, so the comma's length is
+        // always added to last element and that 1 character causes the newlines inside of the array.
+        + """
+        a = [
+          ("az", "by"), ("cf", "de"),
+        ]
 
-      """
+        """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 32)
   }

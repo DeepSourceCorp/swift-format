@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import SwiftDiagnostics
 import SwiftFormat
 import SwiftSyntax
-import SwiftDiagnostics
 
 /// Unifies the handling of findings from the linter, parsing errors from the syntax parser, and
 /// generic errors from the frontend so that they are emitted in a uniform fashion.
@@ -26,20 +26,28 @@ final class DiagnosticsEngine {
   /// A Boolean value indicating whether any warnings were emitted by the diagnostics engine.
   private(set) var hasWarnings: Bool
 
+  /// Whether to upgrade all warnings to errors.
+  private let treatWarningsAsErrors: Bool
+
   /// Creates a new diagnostics engine with the given diagnostic handlers.
   ///
   /// - Parameter diagnosticsHandlers: An array of functions, each of which takes a `Diagnostic` as
   ///   its sole argument and returns `Void`. The functions are called whenever a diagnostic is
   ///   received by the engine.
-  init(diagnosticsHandlers: [(Diagnostic) -> Void]) {
+  init(diagnosticsHandlers: [(Diagnostic) -> Void], treatWarningsAsErrors: Bool = false) {
     self.handlers = diagnosticsHandlers
     self.hasErrors = false
     self.hasWarnings = false
+    self.treatWarningsAsErrors = treatWarningsAsErrors
   }
 
   /// Emits the diagnostic by passing it to the registered handlers, and tracks whether it was an
   /// error or warning diagnostic.
   private func emit(_ diagnostic: Diagnostic) {
+    var diagnostic = diagnostic
+    if treatWarningsAsErrors, diagnostic.severity == .warning {
+      diagnostic.severity = .error
+    }
     switch diagnostic.severity {
     case .error: self.hasErrors = true
     case .warning: self.hasWarnings = true
@@ -62,7 +70,25 @@ final class DiagnosticsEngine {
       Diagnostic(
         severity: .error,
         location: location.map(Diagnostic.Location.init),
-        message: message))
+        message: message
+      )
+    )
+  }
+
+  /// Emits a generic warning message.
+  ///
+  /// - Parameters:
+  ///   - message: The message associated with the error.
+  ///   - location: The location in the source code associated with the error, or nil if there is no
+  ///     location associated with the error.
+  func emitWarning(_ message: String, location: SourceLocation? = nil) {
+    emit(
+      Diagnostic(
+        severity: .warning,
+        location: location.map(Diagnostic.Location.init),
+        message: message
+      )
+    )
   }
 
   /// Emits a finding from the linter and any of its associated notes as diagnostics.
@@ -76,7 +102,9 @@ final class DiagnosticsEngine {
         Diagnostic(
           severity: .note,
           location: note.location.map(Diagnostic.Location.init),
-          message: "\(note.message)"))
+          message: "\(note.message)"
+        )
+      )
     }
   }
 
@@ -101,28 +129,24 @@ final class DiagnosticsEngine {
     case .error: severity = .error
     case .warning: severity = .warning
     case .note: severity = .note
+    case .remark: severity = .note  // should we model this?
     }
     return Diagnostic(
       severity: severity,
       location: Diagnostic.Location(location),
       category: nil,
-      message: message.message)
+      message: message.message
+    )
   }
 
   /// Converts a lint finding into a diagnostic message that can be used by the `TSCBasic`
   /// diagnostics engine and returns it.
   private func diagnosticMessage(for finding: Finding) -> Diagnostic {
-    let severity: Diagnostic.Severity
-    switch finding.severity {
-    case .error: severity = .error
-    case .warning: severity = .warning
-    case .refactoring: severity = .warning
-    case .convention: severity = .warning
-    }
     return Diagnostic(
-      severity: severity,
+      severity: .warning,
       location: finding.location.map(Diagnostic.Location.init),
       category: "\(finding.category)",
-      message: "\(finding.message.text)")
+      message: "\(finding.message.text)"
+    )
   }
 }

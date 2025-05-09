@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -17,23 +17,36 @@ extension SwiftFormatCommand {
   struct Lint: ParsableCommand {
     static var configuration = CommandConfiguration(
       abstract: "Diagnose style issues in Swift source code",
-      discussion: "When no files are specified, it expects the source from standard input.")
+      discussion: "When no files are specified, it expects the source from standard input."
+    )
+
+    @OptionGroup()
+    var configurationOptions: ConfigurationOptions
 
     @OptionGroup()
     var lintOptions: LintFormatOptions
-    
+
     @Flag(
       name: .shortAndLong,
-      help: "Fail on warnings."
+      help: "Treat all findings as errors instead of warnings."
     )
     var strict: Bool = false
 
-    func run() throws {
-      let frontend = LintFrontend(lintFormatOptions: lintOptions)
-      frontend.run()
+    @OptionGroup(visibility: .hidden)
+    var performanceMeasurementOptions: PerformanceMeasurementsOptions
 
-      if frontend.diagnosticsEngine.hasErrors || strict && frontend.diagnosticsEngine.hasWarnings {
-        throw ExitCode.failure
+    func run() throws {
+      try performanceMeasurementOptions.printingInstructionCountIfRequested {
+        let frontend = LintFrontend(
+          configurationOptions: configurationOptions,
+          lintFormatOptions: lintOptions,
+          treatWarningsAsErrors: strict
+        )
+        frontend.run()
+
+        if frontend.diagnosticsEngine.hasErrors {
+          throw ExitCode.failure
+        }
       }
     }
   }

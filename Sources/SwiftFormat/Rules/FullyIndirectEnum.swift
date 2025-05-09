@@ -24,27 +24,43 @@ public final class FullyIndirectEnum: SyntaxFormatRule {
 
   public override func visit(_ node: EnumDeclSyntax) -> DeclSyntax {
     let enumMembers = node.memberBlock.members
-    guard !node.modifiers.has(modifier: "indirect"),
-      allCasesAreIndirect(in: enumMembers)
+    guard !node.modifiers.contains(anyOf: [.indirect]),
+      case let indirectModifiers = indirectModifiersIfAllCasesIndirect(in: enumMembers),
+      !indirectModifiers.isEmpty
     else {
       return DeclSyntax(node)
     }
 
-    diagnose(.moveIndirectKeywordToEnumDecl(name: node.name.text), on: node.name)
+    let notes = indirectModifiers.map { modifier in
+      Finding.Note(
+        message: .removeIndirect,
+        location: Finding.Location(
+          modifier.startLocation(converter: self.context.sourceLocationConverter)
+        )
+      )
+    }
+    diagnose(
+      .moveIndirectKeywordToEnumDecl(name: node.name.text),
+      on: node.enumKeyword,
+      notes: notes
+    )
 
     // Removes 'indirect' keyword from cases, reformats
     let newMembers = enumMembers.map {
       (member: MemberBlockItemSyntax) -> MemberBlockItemSyntax in
       guard let caseMember = member.decl.as(EnumCaseDeclSyntax.self),
-        caseMember.modifiers.has(modifier: "indirect"),
+        caseMember.modifiers.contains(anyOf: [.indirect]),
         let firstModifier = caseMember.modifiers.first
       else {
         return member
       }
 
-      let newCase = caseMember.with(\.modifiers, caseMember.modifiers.remove(name: "indirect"))
-      let formattedCase = rearrangeLeadingTrivia(firstModifier.leadingTrivia, on: newCase)
-      return member.with(\.decl, DeclSyntax(formattedCase))
+      var newCase = caseMember
+      newCase.modifiers.remove(anyOf: [.indirect])
+
+      var newMember = member
+      newMember.decl = DeclSyntax(rearrangeLeadingTrivia(firstModifier.leadingTrivia, on: newCase))
+      return newMember
     }
 
     // If the `indirect` keyword being added would be the first token in the decl, we need to move
@@ -63,29 +79,38 @@ public final class FullyIndirectEnum: SyntaxFormatRule {
 
     let newModifier = DeclModifierSyntax(
       name: TokenSyntax.identifier(
-        "indirect", leadingTrivia: leadingTrivia, trailingTrivia: .spaces(1)), detail: nil)
+        "indirect",
+        leadingTrivia: leadingTrivia,
+        trailingTrivia: .spaces(1)
+      ),
+      detail: nil
+    )
 
-    let newMemberBlock = node.memberBlock.with(\.members, MemberBlockItemListSyntax(newMembers))
-    return DeclSyntax(
-      newEnumDecl
-        .with(\.modifiers, newEnumDecl.modifiers + [newModifier])
-        .with(\.memberBlock, newMemberBlock))
+    newEnumDecl.modifiers = newEnumDecl.modifiers + [newModifier]
+    newEnumDecl.memberBlock.members = MemberBlockItemListSyntax(newMembers)
+    return DeclSyntax(newEnumDecl)
   }
 
   /// Returns a value indicating whether all enum cases in the given list are indirect.
   ///
   /// Note that if the enum has no cases, this returns false.
-  private func allCasesAreIndirect(in members: MemberBlockItemListSyntax) -> Bool {
-    var hadCases = false
+  private func indirectModifiersIfAllCasesIndirect(
+    in members: MemberBlockItemListSyntax
+  ) -> [DeclModifierSyntax] {
+    var indirectModifiers = [DeclModifierSyntax]()
     for member in members {
       if let caseMember = member.decl.as(EnumCaseDeclSyntax.self) {
-        hadCases = true
-        guard caseMember.modifiers.has(modifier: "indirect") else {
-          return false
+        guard
+          let indirectModifier = caseMember.modifiers.first(
+            where: { $0.name.text == "indirect" }
+          )
+        else {
+          return []
         }
+        indirectModifiers.append(indirectModifier)
       }
     }
-    return hadCases
+    return indirectModifiers
   }
 
   /// Transfers given leading trivia to the first token in the case declaration.
@@ -110,8 +135,9 @@ public final class FullyIndirectEnum: SyntaxFormatRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func moveIndirectKeywordToEnumDecl(name: String) -> Finding.Message {
-    "move 'indirect' before the enum declaration '\(name)' when all cases are indirect"
+  fileprivate static func moveIndirectKeywordToEnumDecl(name: String) -> Finding.Message {
+    "declare enum '\(name)' itself as indirect when all cases are indirect"
   }
+
+  fileprivate static let removeIndirect: Finding.Message = "remove 'indirect' here"
 }

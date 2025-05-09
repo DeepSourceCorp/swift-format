@@ -31,12 +31,12 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
       let member = memberItem.decl
       // Collect all stored variables into a list
       if let varDecl = member.as(VariableDeclSyntax.self) {
-        guard !varDecl.modifiers.has(modifier: "static") else { continue }
+        guard !varDecl.modifiers.contains(anyOf: [.static]) else { continue }
         storedProperties.append(varDecl)
         // Collect any possible redundant initializers into a list
       } else if let initDecl = member.as(InitializerDeclSyntax.self) {
         guard initDecl.optionalMark == nil else { continue }
-        guard initDecl.signature.effectSpecifiers?.throwsSpecifier == nil else { continue }
+        guard initDecl.signature.effectSpecifiers?.throwsClause == nil else { continue }
         initializers.append(initDecl)
       }
     }
@@ -50,13 +50,16 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
         initializer.attributes.isEmpty,
         matchesPropertyList(
           parameters: initializer.signature.parameterClause.parameters,
-          properties: storedProperties),
+          properties: storedProperties
+        ),
         matchesAssignmentBody(
           variables: storedProperties,
-          initBody: initializer.body),
+          initBody: initializer.body
+        ),
         matchesAccessLevel(
           modifiers: initializer.modifiers,
-          properties: storedProperties)
+          properties: storedProperties
+        )
       else {
         continue
       }
@@ -72,7 +75,7 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
       extraneousInitializers.forEach { diagnose(.removeRedundantInitializer, on: $0) }
     }
 
-    return .skipChildren
+    return .visitChildren
   }
 
   /// Compares the actual access level of an initializer with the access level of a synthesized
@@ -83,7 +86,8 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
   ///   - properties: The properties from the enclosing type.
   /// - Returns: Whether the initializer has the same access level as the synthesized initializer.
   private func matchesAccessLevel(
-    modifiers: DeclModifierListSyntax?, properties: [VariableDeclSyntax]
+    modifiers: DeclModifierListSyntax?,
+    properties: [VariableDeclSyntax]
   ) -> Bool {
     let synthesizedAccessLevel = synthesizedInitAccessLevel(using: properties)
     let accessLevel = modifiers?.accessLevelModifier
@@ -125,8 +129,11 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
 
       if propertyId.identifier.text != parameter.firstName.text
         || propertyType.description.trimmingCharacters(
-          in: .whitespaces) != parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-      { return false }
+          in: .whitespaces
+        ) != parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+      {
+        return false
+      }
     }
     return true
   }
@@ -185,8 +192,7 @@ public final class UseSynthesizedInitializer: SyntaxLintRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let removeRedundantInitializer: Finding.Message =
+  fileprivate static let removeRedundantInitializer: Finding.Message =
     "remove this explicit initializer, which is identical to the compiler-synthesized initializer"
 }
 
@@ -210,13 +216,42 @@ fileprivate func synthesizedInitAccessLevel(using properties: [VariableDeclSynta
   var hasFileprivate = false
   for property in properties {
     // Private takes precedence, so finding 1 private property defines the access level.
-    if property.modifiers.contains(where: {$0.name.tokenKind == .keyword(.private) && $0.detail == nil}) {
+    if property.modifiers.contains(where: { $0.name.tokenKind == .keyword(.private) && $0.detail == nil }) {
       return .private
     }
-    if property.modifiers.contains(where: {$0.name.tokenKind == .keyword(.fileprivate) && $0.detail == nil}) {
+    if property.modifiers.contains(where: { $0.name.tokenKind == .keyword(.fileprivate) && $0.detail == nil }) {
       hasFileprivate = true
       // Can't break here because a later property might be private.
     }
   }
   return hasFileprivate ? .fileprivate : .internal
+}
+
+// FIXME: Stop using these extensions; they make assumptions about the structure of stored
+// properties and may miss some valid cases, like tuple patterns.
+extension VariableDeclSyntax {
+  /// Returns array of all identifiers listed in the declaration.
+  fileprivate var identifiers: [IdentifierPatternSyntax] {
+    var ids: [IdentifierPatternSyntax] = []
+    for binding in bindings {
+      guard let id = binding.pattern.as(IdentifierPatternSyntax.self) else { continue }
+      ids.append(id)
+    }
+    return ids
+  }
+
+  /// Returns the first identifier.
+  fileprivate var firstIdentifier: IdentifierPatternSyntax {
+    return identifiers[0]
+  }
+
+  /// Returns the first type explicitly stated in the declaration, if present.
+  fileprivate var firstType: TypeSyntax? {
+    return bindings.first?.typeAnnotation?.type
+  }
+
+  /// Returns the first initializer clause, if present.
+  fileprivate var firstInitializer: InitializerClauseSyntax? {
+    return bindings.first?.initializer
+  }
 }

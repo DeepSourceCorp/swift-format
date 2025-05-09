@@ -1,47 +1,66 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
+@_spi(Rules) @_spi(Testing) import SwiftFormat
 import SwiftParser
 import XCTest
-
-@_spi(Rules) @_spi(Testing) import SwiftFormat
 
 class ImportsXCTestVisitorTests: XCTestCase {
   func testDoesNotImportXCTest() throws {
     XCTAssertEqual(
-      try makeContextAndSetImportsXCTest(source: """
-        import Foundation
-        """),
+      try makeContextAndSetImportsXCTest(
+        source: """
+          import Foundation
+          """
+      ),
       .doesNotImportXCTest
     )
   }
 
   func testImportsXCTest() throws {
     XCTAssertEqual(
-      try makeContextAndSetImportsXCTest(source: """
-        import Foundation
-        import XCTest
-        """),
+      try makeContextAndSetImportsXCTest(
+        source: """
+          import Foundation
+          import XCTest
+          """
+      ),
       .importsXCTest
     )
   }
 
   func testImportsSpecificXCTestDecl() throws {
     XCTAssertEqual(
-      try makeContextAndSetImportsXCTest(source: """
-        import Foundation
-        import class XCTest.XCTestCase
-        """),
+      try makeContextAndSetImportsXCTest(
+        source: """
+          import Foundation
+          import class XCTest.XCTestCase
+          """
+      ),
       .importsXCTest
     )
   }
 
   func testImportsXCTestInsideConditional() throws {
     XCTAssertEqual(
-      try makeContextAndSetImportsXCTest(source: """
-        import Foundation
-        #if SOME_FEATURE_FLAG
-          import XCTest
-        #endif
-        """),
+      try makeContextAndSetImportsXCTest(
+        source: """
+          import Foundation
+          #if SOME_FEATURE_FLAG
+            import XCTest
+          #endif
+          """
+      ),
       .importsXCTest
     )
   }
@@ -56,7 +75,8 @@ class ImportsXCTestVisitorTests: XCTestCase {
       findingConsumer: { _ in },
       fileURL: URL(fileURLWithPath: "/tmp/test.swift"),
       sourceFileSyntax: sourceFile,
-      ruleNameCache: ruleNameCache)
+      ruleNameCache: ruleNameCache
+    )
     setImportsXCTest(context: context, sourceFile: sourceFile)
     return context.importsXCTest
   }

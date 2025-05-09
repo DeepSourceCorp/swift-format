@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 final class UseShorthandTypeNamesTests: LintOrFormatRuleTestCase {
   func testNamesInTypeContextsAreShortened() {
@@ -560,7 +571,7 @@ final class UseShorthandTypeNamesTests: LintOrFormatRuleTestCase {
         let c: Int?
         """,
       findings: [
-        FindingSpec("1️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("1️⃣", message: "use shorthand syntax for this 'Optional' type")
       ]
     )
   }
@@ -689,6 +700,46 @@ final class UseShorthandTypeNamesTests: LintOrFormatRuleTestCase {
         FindingSpec("8️⃣", message: "use shorthand syntax for this 'Optional' type"),
         FindingSpec("9️⃣", message: "use shorthand syntax for this 'Optional' type"),
         FindingSpec("🔟", message: "use shorthand syntax for this 'Optional' type"),
+      ]
+    )
+  }
+
+  func testAttributedTypesInOptionalsAreParenthesized() {
+    // If we need to insert parentheses, verify that we do, but also verify that we don't insert
+    // them unnecessarily.
+    assertFormatting(
+      UseShorthandTypeNames.self,
+      input: """
+        var x: 1️⃣Optional<consuming P> = S()
+        var y: 2️⃣Optional<@Sendable (Int) -> Void> = S()
+        var z = [3️⃣Optional<consuming P>]([S()])
+        var a = [4️⃣Optional<@Sendable (Int) -> Void>]([S()])
+
+        var x: 5️⃣Optional<(consuming P)> = S()
+        var y: 6️⃣Optional<(@Sendable (Int) -> Void)> = S()
+        var z = [7️⃣Optional<(consuming P)>]([S()])
+        var a = [8️⃣Optional<(@Sendable (Int) -> Void)>]([S()])
+        """,
+      expected: """
+        var x: (consuming P)? = S()
+        var y: (@Sendable (Int) -> Void)? = S()
+        var z = [(consuming P)?]([S()])
+        var a = [(@Sendable (Int) -> Void)?]([S()])
+
+        var x: (consuming P)? = S()
+        var y: (@Sendable (Int) -> Void)? = S()
+        var z = [(consuming P)?]([S()])
+        var a = [(@Sendable (Int) -> Void)?]([S()])
+        """,
+      findings: [
+        FindingSpec("1️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("2️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("3️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("4️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("5️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("6️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("7️⃣", message: "use shorthand syntax for this 'Optional' type"),
+        FindingSpec("8️⃣", message: "use shorthand syntax for this 'Optional' type"),
       ]
     )
   }

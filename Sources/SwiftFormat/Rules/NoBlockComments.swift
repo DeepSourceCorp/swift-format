@@ -21,7 +21,13 @@ public final class NoBlockComments: SyntaxLintRule {
     for triviaIndex in token.leadingTrivia.indices {
       let piece = token.leadingTrivia[triviaIndex]
       if case .blockComment = piece {
-        diagnose(.avoidBlockComment, on: token, leadingTriviaIndex: triviaIndex)
+        diagnose(.avoidBlockComment, on: token, anchor: .leadingTrivia(triviaIndex))
+      }
+    }
+    for triviaIndex in token.trailingTrivia.indices {
+      let piece = token.trailingTrivia[triviaIndex]
+      if case .blockComment = piece {
+        diagnose(.avoidBlockComment, on: token, anchor: .trailingTrivia(triviaIndex))
       }
     }
     return .skipChildren
@@ -29,7 +35,6 @@ public final class NoBlockComments: SyntaxLintRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let avoidBlockComment: Finding.Message =
+  fileprivate static let avoidBlockComment: Finding.Message =
     "replace this block comment with line comments"
 }

@@ -26,11 +26,17 @@ extension LintPipeline {
   ///   - node: The syntax node on which the rule will be applied. This lets us check whether the
   ///     rule is enabled for the particular source range where the node occurs.
   func visitIfEnabled<Rule: SyntaxLintRule, Node: SyntaxProtocol>(
-    _ visitor: (Rule) -> (Node) -> SyntaxVisitorContinueKind, for node: Node
+    _ visitor: (Rule) -> (Node) -> SyntaxVisitorContinueKind,
+    for node: Node
   ) {
-    guard context.isRuleEnabled(Rule.self, node: Syntax(node)) else { return }
+    guard context.shouldFormat(Rule.self, node: Syntax(node)) else { return }
+    let ruleId = ObjectIdentifier(Rule.self)
+    guard self.shouldSkipChildren[ruleId] == nil else { return }
     let rule = self.rule(Rule.self)
-    _ = visitor(rule)(node)
+    let continueKind = visitor(rule)(node)
+    if case .skipChildren = continueKind {
+      self.shouldSkipChildren[ruleId] = node
+    }
   }
 
   /// Calls the `visit` method of a rule for the given node if that rule is enabled for the node.
@@ -43,15 +49,34 @@ extension LintPipeline {
   ///   - node: The syntax node on which the rule will be applied. This lets us check whether the
   ///     rule is enabled for the particular source range where the node occurs.
   func visitIfEnabled<Rule: SyntaxFormatRule, Node: SyntaxProtocol>(
-    _ visitor: (Rule) -> (Node) -> Any, for node: Node
+    _ visitor: (Rule) -> (Node) -> Any,
+    for node: Node
   ) {
     // Note that visitor function type is expressed as `Any` because we ignore the return value, but
     // more importantly because the `visit` methods return protocol refinements of `Syntax` that
     // cannot currently be expressed as constraints without duplicating this function for each of
     // them individually.
-    guard context.isRuleEnabled(Rule.self, node: Syntax(node)) else { return }
+    guard context.shouldFormat(Rule.self, node: Syntax(node)) else { return }
+    guard self.shouldSkipChildren[ObjectIdentifier(Rule.self)] == nil else { return }
     let rule = self.rule(Rule.self)
     _ = visitor(rule)(node)
+  }
+
+  /// Cleans up any state associated with `rule` when we leave syntax node `node`
+  ///
+  /// - Parameters:
+  ///   - rule: The type of the syntax rule we're cleaning up.
+  ///   - node: The syntax node htat our traversal has left.
+  func onVisitPost<R: Rule, Node: SyntaxProtocol>(
+    rule: R.Type,
+    for node: Node
+  ) {
+    let rule = ObjectIdentifier(rule)
+    if case .some(let skipNode) = self.shouldSkipChildren[rule] {
+      if node.id == skipNode.id {
+        self.shouldSkipChildren.removeValue(forKey: rule)
+      }
+    }
   }
 
   /// Retrieves an instance of a lint or format rule based on its type.

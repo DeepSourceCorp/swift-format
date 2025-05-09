@@ -29,13 +29,19 @@ public final class ValidateDocumentationComments: SyntaxLintRule {
 
   public override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
     return checkFunctionLikeDocumentation(
-      DeclSyntax(node), name: "init", signature: node.signature)
+      DeclSyntax(node),
+      name: "init",
+      signature: node.signature
+    )
   }
 
   public override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
     return checkFunctionLikeDocumentation(
-      DeclSyntax(node), name: node.name.text, signature: node.signature,
-      returnClause: node.signature.returnClause)
+      DeclSyntax(node),
+      name: node.name.text,
+      signature: node.signature,
+      returnClause: node.signature.returnClause
+    )
   }
 
   private func checkFunctionLikeDocumentation(
@@ -62,15 +68,17 @@ public final class ValidateDocumentationComments: SyntaxLintRule {
     }
 
     validateThrows(
-      signature.effectSpecifiers?.throwsSpecifier,
+      signature.effectSpecifiers?.throwsClause?.throwsSpecifier,
       name: name,
       throwsDescription: docComment.throws,
-      node: node)
+      node: node
+    )
     validateReturn(
       returnClause,
       name: name,
       returnsDescription: docComment.returns,
-      node: node)
+      node: node
+    )
     let funcParameters = funcParametersIdentifiers(in: signature.parameterClause.parameters)
 
     // If the documentation of the parameters is wrong 'docCommentInfo' won't
@@ -107,7 +115,7 @@ public final class ValidateDocumentationComments: SyntaxLintRule {
       diagnose(.removeReturnComment(funcName: name), on: node)
     } else if let returnClause = returnClause, returnsDescription == nil {
       if let returnTypeIdentifier = returnClause.type.as(IdentifierTypeSyntax.self),
-         returnTypeIdentifier.name.text == "Never"
+        returnTypeIdentifier.name.text == "Never"
       {
         return
       }
@@ -123,15 +131,17 @@ public final class ValidateDocumentationComments: SyntaxLintRule {
     throwsDescription: Paragraph?,
     node: DeclSyntax
   ) {
-    // If a function is marked as `rethrows`, it doesn't have any errors of its
-    // own that should be documented. So only require documentation for
-    // functions marked `throws`.
+    // Documentation is required for functions marked as `throws`.
+    // For functions marked as `rethrows`, documentation is not enforced
+    // since they don’t introduce new errors of their own.
+    // However, it can still be included if needed.
     let needsThrowsDesc = throwsOrRethrowsKeyword?.tokenKind == .keyword(.throws)
 
-    if !needsThrowsDesc && throwsDescription != nil {
+    if throwsOrRethrowsKeyword == nil && throwsDescription != nil {
       diagnose(
         .removeThrowsComment(funcName: name),
-        on: throwsOrRethrowsKeyword ?? node.firstToken(viewMode: .sourceAccurate))
+        on: throwsOrRethrowsKeyword ?? node.firstToken(viewMode: .sourceAccurate)
+      )
     } else if needsThrowsDesc && throwsDescription == nil {
       diagnose(.documentErrorsThrown(funcName: name), on: throwsOrRethrowsKeyword)
     }
@@ -167,39 +177,32 @@ fileprivate func parametersAreEqual(
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func documentReturnValue(funcName: String) -> Finding.Message {
+  fileprivate static func documentReturnValue(funcName: String) -> Finding.Message {
     "add a 'Returns:' section to document the return value of '\(funcName)'"
   }
 
-  @_spi(Rules)
-  public static func removeReturnComment(funcName: String) -> Finding.Message {
+  fileprivate static func removeReturnComment(funcName: String) -> Finding.Message {
     "remove the 'Returns:' section of '\(funcName)'; it does not return a value"
   }
 
-  @_spi(Rules)
-  public static func parametersDontMatch(funcName: String) -> Finding.Message {
+  fileprivate static func parametersDontMatch(funcName: String) -> Finding.Message {
     "change the parameters of the documentation of '\(funcName)' to match its parameters"
   }
 
-  @_spi(Rules)
-  public static let useSingularParameter: Finding.Message =
+  fileprivate static let useSingularParameter: Finding.Message =
     "replace the plural 'Parameters:' section with a singular inline 'Parameter' section"
 
-  @_spi(Rules)
-  public static let usePluralParameters: Finding.Message =
+  fileprivate static let usePluralParameters: Finding.Message =
     """
     replace the singular inline 'Parameter' section with a plural 'Parameters:' section \
     that has the parameters nested inside it
     """
 
-  @_spi(Rules)
-  public static func removeThrowsComment(funcName: String) -> Finding.Message {
+  fileprivate static func removeThrowsComment(funcName: String) -> Finding.Message {
     "remove the 'Throws:' sections of '\(funcName)'; it does not throw any errors"
   }
 
-  @_spi(Rules)
-  public static func documentErrorsThrown(funcName: String) -> Finding.Message {
+  fileprivate static func documentErrorsThrown(funcName: String) -> Finding.Message {
     "add a 'Throws:' section to document the errors thrown by '\(funcName)'"
   }
 }

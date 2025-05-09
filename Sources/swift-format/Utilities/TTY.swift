@@ -12,18 +12,22 @@
 
 import Foundation
 
+#if os(Android)
+import Android
+#endif
+
 /// Returns a value indicating whether or not the stream is a TTY.
 func isTTY(_ fileHandle: FileHandle) -> Bool {
   // The implementation of this function is adapted from `TerminalController.swift` in
   // swift-tools-support-core.
   #if os(Windows)
-    // The TSC implementation of this function only returns `.file` or `.dumb` for Windows,
-    // neither of which is a TTY.
-    return false
+  // The TSC implementation of this function only returns `.file` or `.dumb` for Windows,
+  // neither of which is a TTY.
+  return false
   #else
-    if ProcessInfo.processInfo.environment["TERM"] == "dumb" {
-      return false
-    }
-    return isatty(fileHandle.fileDescriptor) != 0
+  if ProcessInfo.processInfo.environment["TERM"] == "dumb" {
+    return false
+  }
+  return isatty(fileHandle.fileDescriptor) != 0
   #endif
 }

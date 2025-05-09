@@ -31,9 +31,9 @@ public final class IdentifiersMustBeASCII: SyntaxLintRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func nonASCIICharsNotAllowed(
-    _ invalidCharacters: [String], _ identifierName: String
+  fileprivate static func nonASCIICharsNotAllowed(
+    _ invalidCharacters: [String],
+    _ identifierName: String
   ) -> Finding.Message {
     """
     remove non-ASCII characters from '\(identifierName)': \

@@ -51,7 +51,8 @@ public final class OneVariableDeclarationPerLine: SyntaxFormatRule {
       var splitter = VariableDeclSplitter {
         CodeBlockItemSyntax(
           item: .decl(DeclSyntax($0)),
-          semicolon: nil)
+          semicolon: nil
+        )
       }
       newItems.append(contentsOf: splitter.nodes(bySplitting: visitedDecl))
     }
@@ -74,8 +75,7 @@ public final class OneVariableDeclarationPerLine: SyntaxFormatRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func onlyOneVariableDeclaration(specifier: String) -> Finding.Message {
+  fileprivate static func onlyOneVariableDeclaration(specifier: String) -> Finding.Message {
     "split this variable declaration to introduce only one variable per '\(specifier)'"
   }
 }
@@ -104,8 +104,8 @@ private struct VariableDeclSplitter<Node: SyntaxProtocol> {
   /// as a `CodeBlockItemSyntax`, that wraps it.
   private let generator: (VariableDeclSyntax) -> Node
 
-  /// Bindings that have been collected so far.
-  private var bindingQueue = [PatternBindingSyntax]()
+  /// Bindings that have been collected so far and the trivia that preceded them.
+  private var bindingQueue = [(PatternBindingSyntax, Trivia)]()
 
   /// The variable declaration being split.
   ///
@@ -135,20 +135,29 @@ private struct VariableDeclSplitter<Node: SyntaxProtocol> {
     self.varDecl = varDecl
     self.nodes = []
 
+    // We keep track of trivia that precedes each binding (which is reflected as trailing trivia
+    // on the previous token) so that we can reassociate it if we flush the bindings out as
+    // individual variable decls. This means that we can rewrite `let /*a*/ a, /*b*/ b: Int` as
+    // `let /*a*/ a: Int; let /*b*/ b: Int`, for example.
+    var precedingTrivia = varDecl.bindingSpecifier.trailingTrivia
+
     for binding in varDecl.bindings {
       if binding.initializer != nil {
         // If this is the only initializer in the queue so far, that's ok. If
         // it's an initializer following other un-flushed lone identifier
         // bindings, that's not valid Swift. But in either case, we'll flush
         // them as a single decl.
-        bindingQueue.append(binding.with(\.trailingComma, nil))
+        var newBinding = binding
+        newBinding.trailingComma = nil
+        bindingQueue.append((newBinding, precedingTrivia))
         flushRemaining()
       } else if let typeAnnotation = binding.typeAnnotation {
-        bindingQueue.append(binding)
+        bindingQueue.append((binding, precedingTrivia))
         flushIndividually(typeAnnotation: typeAnnotation)
       } else {
-        bindingQueue.append(binding)
+        bindingQueue.append((binding, precedingTrivia))
       }
+      precedingTrivia = binding.trailingComma?.trailingTrivia ?? []
     }
     flushRemaining()
 
@@ -172,8 +181,8 @@ private struct VariableDeclSplitter<Node: SyntaxProtocol> {
   private mutating func flushRemaining() {
     guard !bindingQueue.isEmpty else { return }
 
-    let newDecl =
-      varDecl.with(\.bindings, PatternBindingListSyntax(bindingQueue))
+    var newDecl = varDecl!
+    newDecl.bindings = PatternBindingListSyntax(bindingQueue.map(\.0))
     nodes.append(generator(newDecl))
 
     fixOriginalVarDeclTrivia()
@@ -188,13 +197,16 @@ private struct VariableDeclSplitter<Node: SyntaxProtocol> {
   ) {
     assert(!bindingQueue.isEmpty)
 
-    for binding in bindingQueue {
+    for (binding, trailingTrivia) in bindingQueue {
       assert(binding.initializer == nil)
 
-      let newBinding =
-        binding.with(\.trailingComma, nil).with(\.typeAnnotation, typeAnnotation)
-      let newDecl =
-        varDecl.with(\.bindings, PatternBindingListSyntax([newBinding]))
+      var newBinding = binding
+      newBinding.typeAnnotation = typeAnnotation
+      newBinding.trailingComma = nil
+
+      var newDecl = varDecl!
+      newDecl.bindingSpecifier.trailingTrivia = trailingTrivia
+      newDecl.bindings = PatternBindingListSyntax([newBinding])
       nodes.append(generator(newDecl))
 
       fixOriginalVarDeclTrivia()
@@ -203,4 +215,3 @@ private struct VariableDeclSplitter<Node: SyntaxProtocol> {
     bindingQueue = []
   }
 }
-

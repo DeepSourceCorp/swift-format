@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 final class KeyPathExprTests: PrettyPrintTestCase {
   func testSimple() {
     let input =
@@ -131,7 +143,9 @@ final class KeyPathExprTests: PrettyPrintTestCase {
       #"""
       let x = \ReallyLongType.reallyLongProperty.anotherLongProperty
       let x = \.reeeeallyLongProperty.anotherLongProperty
+      let x = \.longProperty.a.b.c[really + long + expression]
       let x = \.longProperty.a.b.c[really + long + expression].anotherLongProperty
+      let x = \.longProperty.a.b.c[label:really + long + expression].anotherLongProperty
       """#
 
     let expected =
@@ -146,6 +160,16 @@ final class KeyPathExprTests: PrettyPrintTestCase {
       let x =
         \.longProperty.a.b.c[
           really + long
+            + expression]
+      let x =
+        \.longProperty.a.b.c[
+          really + long
+            + expression
+        ].anotherLongProperty
+      let x =
+        \.longProperty.a.b.c[
+          label: really
+            + long
             + expression
         ].anotherLongProperty
 

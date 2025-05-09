@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class ClosureExprTests: PrettyPrintTestCase {
   func testBasicFunctionClosures_noPackArguments() {
@@ -189,7 +201,7 @@ final class ClosureExprTests: PrettyPrintTestCase {
 
   func testClosuresWithIfs() {
     let input =
-    """
+      """
       let a = afunc() {
         if condition1 {
           return true
@@ -209,7 +221,7 @@ final class ClosureExprTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       let a = afunc() {
         if condition1 {
           return true
@@ -482,7 +494,11 @@ final class ClosureExprTests: PrettyPrintTestCase {
     var config = Configuration.forTesting
     config.prioritizeKeepingFunctionOutputTogether = true
     assertPrettyPrintEqual(
-      input: input, expected: expectedKeepingOutputTogether, linelength: 50, configuration: config)
+      input: input,
+      expected: expectedKeepingOutputTogether,
+      linelength: 50,
+      configuration: config
+    )
   }
 
   func testClosureSignatureAttributes() {

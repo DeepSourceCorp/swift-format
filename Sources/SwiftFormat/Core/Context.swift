@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2019 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2024 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -11,10 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import SwiftFormatConfiguration
 import SwiftOperators
-import SwiftSyntax
 import SwiftParser
+import SwiftSyntax
 
 /// Context contains the bits that each formatter and linter will need access to.
 ///
@@ -39,6 +38,9 @@ public final class Context {
 
   /// The configuration for this run of the pipeline, provided by a configuration JSON file.
   let configuration: Configuration
+
+  /// The selection to process
+  let selection: Selection
 
   /// Defines the operators and their precedence relationships that were used during parsing.
   let operatorTable: OperatorTable
@@ -67,6 +69,7 @@ public final class Context {
     operatorTable: OperatorTable,
     findingConsumer: ((Finding) -> Void)?,
     fileURL: URL,
+    selection: Selection = .infinite,
     sourceFileSyntax: SourceFileSyntax,
     source: String? = nil,
     ruleNameCache: [ObjectIdentifier: String]
@@ -75,6 +78,7 @@ public final class Context {
     self.operatorTable = operatorTable
     self.findingEmitter = FindingEmitter(consumer: findingConsumer)
     self.fileURL = fileURL
+    self.selection = selection
     self.importsXCTest = .notDetermined
     let tree = source.map { Parser.parse(source: $0) } ?? sourceFileSyntax
     self.sourceLocationConverter =
@@ -87,16 +91,19 @@ public final class Context {
   }
 
   /// Given a rule's name and the node it is examining, determine if the rule is disabled at this
-  /// location or not.
-  func isRuleEnabled<R: Rule>(_ rule: R.Type, node: Syntax) -> Bool {
+  /// location or not. Also makes sure the entire node is contained inside any selection.
+  func shouldFormat<R: Rule>(_ rule: R.Type, node: Syntax) -> Bool {
+    guard node.isInsideSelection(selection) else { return false }
+
     let loc = node.startLocation(converter: self.sourceLocationConverter)
 
     assert(
       ruleNameCache[ObjectIdentifier(rule)] != nil,
       """
       Missing cached rule name for '\(rule)'! \
-      Ensure `generate-pipelines` has been run and `ruleNameCache` was injected.
-      """)
+      Ensure `generate-swift-format` has been run and `ruleNameCache` was injected.
+      """
+    )
 
     let ruleName = ruleNameCache[ObjectIdentifier(rule)] ?? R.ruleName
     switch ruleMask.ruleState(ruleName, at: loc) {

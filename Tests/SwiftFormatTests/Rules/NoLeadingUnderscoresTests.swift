@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 final class NoLeadingUnderscoresTests: LintOrFormatRuleTestCase {
   func testVars() {
@@ -135,7 +146,7 @@ final class NoLeadingUnderscoresTests: LintOrFormatRuleTestCase {
       infix operator <> : _BazPrecedence
       """,
       findings: [
-        FindingSpec("1️⃣", message: "remove the leading '_' from the name '_FooPrecedence'"),
+        FindingSpec("1️⃣", message: "remove the leading '_' from the name '_FooPrecedence'")
       ]
     )
   }
@@ -148,7 +159,7 @@ final class NoLeadingUnderscoresTests: LintOrFormatRuleTestCase {
       typealias 1️⃣_Bar = Bar
       """,
       findings: [
-        FindingSpec("1️⃣", message: "remove the leading '_' from the name '_Bar'"),
+        FindingSpec("1️⃣", message: "remove the leading '_' from the name '_Bar'")
       ]
     )
   }

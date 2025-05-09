@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See https://swift.org/LICENSE.txt for license information
@@ -11,12 +11,123 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import SwiftFormat
-import SwiftFormatConfiguration
-import SwiftSyntax
+@_spi(Internal) import SwiftFormat
 import SwiftParser
+import SwiftSyntax
 
 class Frontend {
+  /// Provides formatter configurations for given `.swift` source files, configuration files or configuration strings.
+  struct ConfigurationProvider {
+    /// Loads formatter configuration files and chaches them in memory.
+    private var configurationLoader: ConfigurationLoader = ConfigurationLoader()
+
+    /// The diagnostic engine to which warnings and errors will be emitted.
+    private let diagnosticsEngine: DiagnosticsEngine
+
+    /// Creates a new instance with the given options.
+    ///
+    /// - Parameter diagnosticsEngine: The diagnostic engine to which warnings and errors will be emitted.
+    init(diagnosticsEngine: DiagnosticsEngine) {
+      self.diagnosticsEngine = diagnosticsEngine
+    }
+
+    /// Checks if all the rules in the given configuration are supported by the registry.
+    ///
+    /// If there are any rules that are not supported, they are emitted as a warning.
+    private func checkForUnrecognizedRules(in configuration: Configuration) {
+      // If any rules in the decoded configuration are not supported by the registry,
+      // emit them into the diagnosticsEngine as warnings.
+      // That way they will be printed out, but we'll continue execution on the valid rules.
+      let invalidRules = configuration.rules.filter { !RuleRegistry.rules.keys.contains($0.key) }
+      for rule in invalidRules {
+        diagnosticsEngine.emitWarning("Configuration contains an unrecognized rule: \(rule.key)", location: nil)
+      }
+    }
+
+    /// Returns the configuration that applies to the given `.swift` source file, when an explicit
+    /// configuration path is also perhaps provided.
+    ///
+    /// This method also checks for unrecognized rules within the configuration.
+    ///
+    /// - Parameters:
+    ///   - pathOrString: A string containing either the path to a configuration file that will be
+    ///     loaded, JSON configuration data directly, or `nil` to try to infer it from
+    ///     `swiftFileURL`.
+    ///   - swiftFileURL: The path to a `.swift` file, which will be used to infer the path to the
+    ///     configuration file if `configurationFilePath` is nil.
+    ///
+    /// - Returns: If successful, the returned configuration is the one loaded from `pathOrString` if
+    ///   it was provided, or by searching in paths inferred by `swiftFileURL` if one exists, or the
+    ///   default configuration otherwise. If an error occurred when reading the configuration, a
+    ///   diagnostic is emitted and `nil` is returned. If neither `pathOrString` nor `swiftFileURL`
+    ///   were provided, a default `Configuration()` will be returned.
+    mutating func provide(
+      forConfigPathOrString pathOrString: String?,
+      orForSwiftFileAt swiftFileURL: URL?
+    ) -> Configuration? {
+      if let pathOrString = pathOrString {
+        // If an explicit configuration file path was given, try to load it and fail if it cannot be
+        // loaded. (Do not try to fall back to a path inferred from the source file path.)
+        let configurationFileURL = URL(fileURLWithPath: pathOrString)
+        do {
+          let configuration = try configurationLoader.configuration(at: configurationFileURL)
+          self.checkForUnrecognizedRules(in: configuration)
+          return configuration
+        } catch {
+          // If we failed to load this from the path, try interpreting the string as configuration
+          // data itself because the user might have written something like `--configuration '{...}'`,
+          let data = pathOrString.data(using: .utf8)!
+          if let configuration = try? Configuration(data: data) {
+            return configuration
+          }
+
+          // Fail if the configuration flag was neither a valid file path nor valid configuration
+          // data.
+          diagnosticsEngine.emitError("Unable to read configuration: \(error.localizedDescription)")
+          return nil
+        }
+      }
+
+      // If no explicit configuration file path was given but a `.swift` source file path was given,
+      // then try to load the configuration by inferring it based on the source file path.
+      if let swiftFileURL = swiftFileURL {
+        do {
+          if let configuration = try configurationLoader.configuration(forPath: swiftFileURL) {
+            self.checkForUnrecognizedRules(in: configuration)
+            return configuration
+          }
+          // Fall through to the default return at the end of the function.
+        } catch {
+          diagnosticsEngine.emitError(
+            "Unable to read configuration for \(swiftFileURL.relativePath): \(error.localizedDescription)"
+          )
+          return nil
+        }
+      } else {
+        // If reading from stdin and no explicit configuration file was given,
+        // walk up the file tree from the cwd to find a config.
+
+        let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        // Definitely a Swift file. Definitely not a directory. Shhhhhh.
+        do {
+          if let configuration = try configurationLoader.configuration(forPath: cwd) {
+            self.checkForUnrecognizedRules(in: configuration)
+            return configuration
+          }
+        } catch {
+          diagnosticsEngine.emitError(
+            "Unable to read configuration for \(cwd.relativePath): \(error.localizedDescription)"
+          )
+          return nil
+        }
+      }
+
+      // An explicit configuration has not been given, and one cannot be found.
+      // Return the default configuration.
+      return Configuration()
+    }
+  }
+
   /// Represents a file to be processed by the frontend and any file-specific options associated
   /// with it.
   final class FileToProcess {
@@ -36,6 +147,9 @@ class Frontend {
     /// The configuration that should applied for this file.
     let configuration: Configuration
 
+    /// the selected ranges to process
+    let selection: Selection
+
     /// Returns the string contents of the file.
     ///
     /// The contents of the file are assumed to be UTF-8 encoded. If there is an error decoding the
@@ -46,10 +160,16 @@ class Frontend {
       return String(data: sourceData, encoding: .utf8)
     }()
 
-    init(fileHandle: FileHandle, url: URL, configuration: Configuration) {
+    init(
+      fileHandle: FileHandle,
+      url: URL,
+      configuration: Configuration,
+      selection: Selection = .infinite
+    ) {
       self.fileHandle = fileHandle
       self.url = url
       self.configuration = configuration
+      self.selection = selection
     }
   }
 
@@ -59,11 +179,14 @@ class Frontend {
   /// The diagnostic engine to which warnings and errors will be emitted.
   final let diagnosticsEngine: DiagnosticsEngine
 
+  /// Options that control the tool's configuration.
+  final let configurationOptions: ConfigurationOptions
+
   /// Options that apply during formatting or linting.
   final let lintFormatOptions: LintFormatOptions
 
-  /// Loads formatter configuration files.
-  final var configurationLoader = ConfigurationLoader()
+  /// The provider for formatter configurations.
+  final var configurationProvider: ConfigurationProvider
 
   /// Advanced options that are useful for developing/debugging but otherwise not meant for general
   /// use.
@@ -77,23 +200,49 @@ class Frontend {
   /// Creates a new frontend with the given options.
   ///
   /// - Parameter lintFormatOptions: Options that apply during formatting or linting.
-  init(lintFormatOptions: LintFormatOptions) {
+  init(
+    configurationOptions: ConfigurationOptions,
+    lintFormatOptions: LintFormatOptions,
+    treatWarningsAsErrors: Bool = false
+  ) {
+    self.configurationOptions = configurationOptions
     self.lintFormatOptions = lintFormatOptions
 
     self.diagnosticPrinter = StderrDiagnosticPrinter(
-      colorMode: lintFormatOptions.colorDiagnostics.map { $0 ? .on : .off } ?? .auto)
-    self.diagnosticsEngine =
-      DiagnosticsEngine(diagnosticsHandlers: [diagnosticPrinter.printDiagnostic])
+      colorMode: lintFormatOptions.colorDiagnostics.map { $0 ? .on : .off } ?? .auto
+    )
+    self.diagnosticsEngine = DiagnosticsEngine(
+      diagnosticsHandlers: [diagnosticPrinter.printDiagnostic],
+      treatWarningsAsErrors: treatWarningsAsErrors
+    )
+    self.configurationProvider = ConfigurationProvider(diagnosticsEngine: self.diagnosticsEngine)
   }
 
   /// Runs the linter or formatter over the inputs.
   final func run() {
-    if lintFormatOptions.paths.isEmpty {
+    if lintFormatOptions.paths == ["-"] {
+      processStandardInput()
+    } else if lintFormatOptions.paths.isEmpty {
+      diagnosticsEngine.emitWarning(
+        """
+        Running swift-format without input paths is deprecated and will be removed in the future.
+
+        Please update your invocation to do either of the following:
+
+        - Pass `-` to read from stdin (e.g., `cat MyFile.swift | swift-format -`).
+        - Pass one or more paths to Swift source files or directories containing
+          Swift source files. When passing directories, make sure to include the
+          `--recursive` flag.
+
+        For more information, use the `--help` option.
+        """
+      )
       processStandardInput()
     } else {
       processURLs(
         lintFormatOptions.paths.map(URL.init(fileURLWithPath:)),
-        parallel: lintFormatOptions.parallel)
+        parallel: lintFormatOptions.parallel
+      )
     }
   }
 
@@ -109,9 +258,13 @@ class Frontend {
 
   /// Processes source content from standard input.
   private func processStandardInput() {
-    guard let configuration = configuration(
-      at: lintFormatOptions.configurationPath.map(URL.init(fileURLWithPath:)),
-      orInferredFromSwiftFileAt: nil)
+    let assumedUrl = lintFormatOptions.assumeFilename.map(URL.init(fileURLWithPath:))
+
+    guard
+      let configuration = configurationProvider.provide(
+        forConfigPathOrString: configurationOptions.configuration,
+        orForSwiftFileAt: assumedUrl
+      )
     else {
       // Already diagnosed in the called method.
       return
@@ -119,8 +272,10 @@ class Frontend {
 
     let fileToProcess = FileToProcess(
       fileHandle: FileHandle.standardInput,
-      url: URL(fileURLWithPath: lintFormatOptions.assumeFilename ?? "<stdin>"),
-      configuration: configuration)
+      url: assumedUrl ?? URL(fileURLWithPath: "<stdin>"),
+      configuration: configuration,
+      selection: Selection(offsetRanges: lintFormatOptions.offsets)
+    )
     processFile(fileToProcess)
   }
 
@@ -128,15 +283,21 @@ class Frontend {
   private func processURLs(_ urls: [URL], parallel: Bool) {
     precondition(
       !urls.isEmpty,
-      "processURLs(_:) should only be called when 'urls' is non-empty.")
+      "processURLs(_:) should only be called when 'urls' is non-empty."
+    )
 
     if parallel {
-      let filesToProcess = FileIterator(urls: urls).compactMap(openAndPrepareFile)
+      let filesToProcess =
+        FileIterator(urls: urls, followSymlinks: lintFormatOptions.followSymlinks)
+        .compactMap(openAndPrepareFile)
       DispatchQueue.concurrentPerform(iterations: filesToProcess.count) { index in
         processFile(filesToProcess[index])
       }
     } else {
-      FileIterator(urls: urls).lazy.compactMap(openAndPrepareFile).forEach(processFile)
+      FileIterator(urls: urls, followSymlinks: lintFormatOptions.followSymlinks)
+        .lazy
+        .compactMap(openAndPrepareFile)
+        .forEach(processFile)
     }
   }
 
@@ -145,67 +306,27 @@ class Frontend {
   private func openAndPrepareFile(at url: URL) -> FileToProcess? {
     guard let sourceFile = try? FileHandle(forReadingFrom: url) else {
       diagnosticsEngine.emitError(
-        "Unable to open \(url.relativePath): file is not readable or does not exist")
+        "Unable to open \(url.relativePath): file is not readable or does not exist"
+      )
       return nil
     }
 
     guard
-      let configuration = configuration(
-        at: lintFormatOptions.configurationPath.map(URL.init(fileURLWithPath:)),
-        orInferredFromSwiftFileAt: url)
+      let configuration = configurationProvider.provide(
+        forConfigPathOrString: configurationOptions.configuration,
+        orForSwiftFileAt: url
+      )
     else {
       // Already diagnosed in the called method.
       return nil
     }
 
-    return FileToProcess(fileHandle: sourceFile, url: url, configuration: configuration)
+    return FileToProcess(
+      fileHandle: sourceFile,
+      url: url,
+      configuration: configuration,
+      selection: Selection(offsetRanges: lintFormatOptions.offsets)
+    )
   }
 
-  /// Returns the configuration that applies to the given `.swift` source file, when an explicit
-  /// configuration path is also perhaps provided.
-  ///
-  /// - Parameters:
-  ///   - configurationFilePath: The path to a configuration file that will be loaded, or `nil` to
-  ///     try to infer it from `swiftFilePath`.
-  ///   - swiftFilePath: The path to a `.swift` file, which will be used to infer the path to the
-  ///     configuration file if `configurationFilePath` is nil.
-  /// - Returns: If successful, the returned configuration is the one loaded from
-  ///   `configurationFilePath` if it was provided, or by searching in paths inferred by
-  ///   `swiftFilePath` if one exists, or the default configuration otherwise. If an error occurred
-  ///   when reading the configuration, a diagnostic is emitted and `nil` is returned.
-  private func configuration(
-    at configurationFileURL: URL?,
-    orInferredFromSwiftFileAt swiftFileURL: URL?
-  ) -> Configuration? {
-    // If an explicit configuration file path was given, try to load it and fail if it cannot be
-    // loaded. (Do not try to fall back to a path inferred from the source file path.)
-    if let configurationFileURL = configurationFileURL {
-      do {
-        return try configurationLoader.configuration(at: configurationFileURL)
-      } catch {
-        diagnosticsEngine.emitError("Unable to read configuration: \(error.localizedDescription)")
-        return nil
-      }
-    }
-
-    // If no explicit configuration file path was given but a `.swift` source file path was given,
-    // then try to load the configuration by inferring it based on the source file path.
-    if let swiftFileURL = swiftFileURL {
-      do {
-        if let configuration = try configurationLoader.configuration(forSwiftFileAt: swiftFileURL) {
-          return configuration
-        }
-        // Fall through to the default return at the end of the function.
-      } catch {
-        diagnosticsEngine.emitError(
-          "Unable to read configuration for \(swiftFileURL.path): \(error.localizedDescription)")
-        return nil
-      }
-    }
-
-    // If neither path was given (for example, formatting standard input with no assumed filename)
-    // or if there was no configuration found by inferring it from the source file path, return the
-    // default configuration.
-    return Configuration()
-  }
 }

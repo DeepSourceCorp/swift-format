@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 final class AmbiguousTrailingClosureOverloadTests: LintOrFormatRuleTestCase {
   func testAmbiguousOverloads() {
@@ -29,29 +40,33 @@ final class AmbiguousTrailingClosureOverloadTests: LintOrFormatRuleTestCase {
       """,
       findings: [
         FindingSpec(
-          "1️⃣", message: "rename 'strong(mad:)' so it is no longer ambiguous when called with a trailing closure",
+          "1️⃣",
+          message: "rename 'strong(mad:)' so it is no longer ambiguous when called with a trailing closure",
           notes: [
             NoteSpec("2️⃣", message: "ambiguous overload 'strong(bad:)' is here"),
             NoteSpec("3️⃣", message: "ambiguous overload 'strong(sad:)' is here"),
           ]
         ),
         FindingSpec(
-          "4️⃣", message: "rename 'the(cheat:)' so it is no longer ambiguous when called with a trailing closure",
+          "4️⃣",
+          message: "rename 'the(cheat:)' so it is no longer ambiguous when called with a trailing closure",
           notes: [
-            NoteSpec("5️⃣", message: "ambiguous overload 'the(sneak:)' is here"),
+            NoteSpec("5️⃣", message: "ambiguous overload 'the(sneak:)' is here")
           ]
         ),
         FindingSpec(
-          "6️⃣", message: "rename 'the(kingOfTown:)' so it is no longer ambiguous when called with a trailing closure",
+          "6️⃣",
+          message: "rename 'the(kingOfTown:)' so it is no longer ambiguous when called with a trailing closure",
           notes: [
             NoteSpec("7️⃣", message: "ambiguous overload 'the(cheatCommandos:)' is here"),
             NoteSpec("8️⃣", message: "ambiguous overload 'the(brothersStrong:)' is here"),
           ]
         ),
         FindingSpec(
-          "9️⃣", message: "rename 'hom(estar:)' so it is no longer ambiguous when called with a trailing closure",
+          "9️⃣",
+          message: "rename 'hom(estar:)' so it is no longer ambiguous when called with a trailing closure",
           notes: [
-            NoteSpec("🔟", message: "ambiguous overload 'hom(sar:)' is here"),
+            NoteSpec("🔟", message: "ambiguous overload 'hom(sar:)' is here")
           ]
         ),
       ]

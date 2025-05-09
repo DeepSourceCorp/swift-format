@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 // FIXME: Diagnostics should be emitted inside the comment, not at the beginning of the declaration.
 final class ValidateDocumentationCommentsTests: LintOrFormatRuleTestCase {
@@ -26,8 +37,15 @@ final class ValidateDocumentationCommentsTests: LintOrFormatRuleTestCase {
       2️⃣func testInvalidParameterDesc(command: String, stdin: String) -> String {}
       """,
       findings: [
-        FindingSpec("1️⃣", message: "replace the plural 'Parameters:' section with a singular inline 'Parameter' section"),
-        FindingSpec("2️⃣", message: "replace the singular inline 'Parameter' section with a plural 'Parameters:' section that has the parameters nested inside it"),
+        FindingSpec(
+          "1️⃣",
+          message: "replace the plural 'Parameters:' section with a singular inline 'Parameter' section"
+        ),
+        FindingSpec(
+          "2️⃣",
+          message:
+            "replace the singular inline 'Parameter' section with a plural 'Parameters:' section that has the parameters nested inside it"
+        ),
       ]
     )
   }
@@ -89,7 +107,6 @@ final class ValidateDocumentationCommentsTests: LintOrFormatRuleTestCase {
       findings: [
         FindingSpec("1️⃣", message: "remove the 'Throws:' sections of 'doesNotThrow'; it does not throw any errors"),
         FindingSpec("2️⃣", message: "add a 'Throws:' section to document the errors thrown by 'doesThrow'"),
-        FindingSpec("3️⃣", message: "remove the 'Throws:' sections of 'doesRethrow'; it does not throw any errors"),
       ]
     )
   }
@@ -216,7 +233,10 @@ final class ValidateDocumentationCommentsTests: LintOrFormatRuleTestCase {
       }
       """,
       findings: [
-        FindingSpec("1️⃣", message: "change the parameters of the documentation of 'incorrectParam' to match its parameters"),
+        FindingSpec(
+          "1️⃣",
+          message: "change the parameters of the documentation of 'incorrectParam' to match its parameters"
+        )
       ]
     )
   }

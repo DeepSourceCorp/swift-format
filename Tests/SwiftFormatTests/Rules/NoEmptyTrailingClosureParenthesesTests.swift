@@ -1,8 +1,18 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
-// FIXME: Why not emit the finding at the very parentheses we want the user to remove?
 final class NoEmptyTrailingClosureParenthesesTests: LintOrFormatRuleTestCase {
   func testInvalidEmptyParenTrailingClosure() {
     assertFormatting(
@@ -14,29 +24,29 @@ final class NoEmptyTrailingClosureParenthesesTests: LintOrFormatRuleTestCase {
         func greetApathetically(_ nameProvider: () -> String) {
           // ...
         }
-        0️⃣greetEnthusiastically() { "John" }
+        greetEnthusiastically0️⃣() { "John" }
         greetApathetically { "not John" }
         func myfunc(cls: MyClass) {
           cls.myClosure { $0 }
         }
         func myfunc(cls: MyClass) {
-          1️⃣cls.myBadClosure() { $0 }
+          cls.myBadClosure1️⃣() { $0 }
         }
-        2️⃣DispatchQueue.main.async() {
-          3️⃣greetEnthusiastically() { "John" }
-          4️⃣DispatchQueue.main.async() {
-            5️⃣greetEnthusiastically() { "Willis" }
+        DispatchQueue.main.async2️⃣() {
+          greetEnthusiastically3️⃣() { "John" }
+          DispatchQueue.main.async4️⃣() {
+            greetEnthusiastically5️⃣() { "Willis" }
           }
         }
         DispatchQueue.global.async(inGroup: blah) {
-          6️⃣DispatchQueue.main.async() {
-            7️⃣greetEnthusiastically() { "Willis" }
+          DispatchQueue.main.async6️⃣() {
+            greetEnthusiastically7️⃣() { "Willis" }
           }
           DispatchQueue.main.async {
-            8️⃣greetEnthusiastically() { "Willis" }
+            greetEnthusiastically8️⃣() { "Willis" }
           }
         }
-        9️⃣foo(🔟bar() { baz })() { blah }
+        foo(bar🔟() { baz })9️⃣() { blah }
         """,
       expected: """
         func greetEnthusiastically(_ nameProvider: () -> String) {
@@ -82,6 +92,31 @@ final class NoEmptyTrailingClosureParenthesesTests: LintOrFormatRuleTestCase {
         FindingSpec("9️⃣", message: "remove the empty parentheses following ')'"),
         FindingSpec("🔟", message: "remove the empty parentheses following 'bar'"),
       ]
+    )
+  }
+
+  func testDoNotRemoveParensContainingOnlyComments() {
+    assertFormatting(
+      NoEmptyTrailingClosureParentheses.self,
+      input: """
+        greetEnthusiastically(/*oldArg: x*/) { "John" }
+        greetEnthusiastically(
+          /*oldArg: x*/
+        ) { "John" }
+        greetEnthusiastically(
+          // oldArg: x
+        ) { "John" }
+        """,
+      expected: """
+        greetEnthusiastically(/*oldArg: x*/) { "John" }
+        greetEnthusiastically(
+          /*oldArg: x*/
+        ) { "John" }
+        greetEnthusiastically(
+          // oldArg: x
+        ) { "John" }
+        """,
+      findings: []
     )
   }
 }

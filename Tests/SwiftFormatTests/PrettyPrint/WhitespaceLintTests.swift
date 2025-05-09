@@ -1,5 +1,16 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftFormat
-import SwiftFormatConfiguration
 import _SwiftFormatTestSupport
 
 // A note about these tests: `WhitespaceLinter` *only* emits findings; it does not do any
@@ -36,7 +47,7 @@ final class WhitespaceLintTests: WhitespaceTestCase {
 
         """,
       findings: [
-        FindingSpec("1️⃣", message: "use spaces for spacing"),
+        FindingSpec("1️⃣", message: "use spaces for spacing")
       ]
     )
   }
@@ -164,10 +175,9 @@ final class WhitespaceLintTests: WhitespaceTestCase {
 
         """,
       findings: [
-        // FIXME: These should be singular.
-        FindingSpec("1️⃣", message: "add 1 line breaks"),
-        FindingSpec("2️⃣", message: "add 1 line breaks"),
-        FindingSpec("3️⃣", message: "add 1 line breaks"),
+        FindingSpec("1️⃣", message: "add 1 line break"),
+        FindingSpec("2️⃣", message: "add 1 line break"),
+        FindingSpec("3️⃣", message: "add 1 line break"),
       ]
     )
   }
@@ -241,7 +251,32 @@ final class WhitespaceLintTests: WhitespaceTestCase {
       findings: [
         FindingSpec("1️⃣", message: "line is too long"),
         FindingSpec("2️⃣", message: "line is too long"),
-        FindingSpec("3️⃣", message: "add 1 line breaks"),
+        FindingSpec("3️⃣", message: "add 1 line break"),
+      ]
+    )
+  }
+
+  func testUnexpectedUnicodeCharacters() {
+    assertWhitespaceLint(
+      input: """
+        // Hello World\u{2028}
+        // Hello\u{20}\u{2028}World
+        // Hello World\u{2028}\u{2029}\u{2029}
+        // Hello World              \u{2028}
+        // Hello World\u{2028}1️⃣\u{20}\u{20}\u{20}
+
+        """,
+      expected: """
+        // Hello World\u{2028}
+        // Hello\u{20}\u{2028}World
+        // Hello World\u{2028}\u{2029}\u{2029}
+        // Hello World              \u{2028}
+        // Hello World\u{2028}
+
+        """,
+      linelength: 30,
+      findings: [
+        FindingSpec("1️⃣", message: "remove trailing whitespace")
       ]
     )
   }

@@ -1,9 +1,18 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
-// FIXME: The finding message should indicate what kind of literal it is (decimal, binary, etc.) and
-// it should refer to "digits" instead of "numbers".
 final class GroupNumericLiteralsTests: LintOrFormatRuleTestCase {
   func testNumericGrouping() {
     assertFormatting(
@@ -47,15 +56,15 @@ final class GroupNumericLiteralsTests: LintOrFormatRuleTestCase {
         ]
         """,
       findings: [
-        FindingSpec("1️⃣", message: "group numeric literal using '_' every 3rd number"),
-        FindingSpec("2️⃣", message: "group numeric literal using '_' every 4th number"),
-        FindingSpec("3️⃣", message: "group numeric literal using '_' every 8th number"),
-        FindingSpec("4️⃣", message: "group numeric literal using '_' every 3rd number"),
-        FindingSpec("5️⃣", message: "group numeric literal using '_' every 3rd number"),
-        FindingSpec("6️⃣", message: "group numeric literal using '_' every 4th number"),
-        FindingSpec("7️⃣", message: "group numeric literal using '_' every 8th number"),
-        FindingSpec("8️⃣", message: "group numeric literal using '_' every 4th number"),
-        FindingSpec("9️⃣", message: "group numeric literal using '_' every 4th number"),
+        FindingSpec("1️⃣", message: "group every 3 digits in this decimal literal using a '_' separator"),
+        FindingSpec("2️⃣", message: "group every 4 digits in this hexadecimal literal using a '_' separator"),
+        FindingSpec("3️⃣", message: "group every 8 digits in this binary literal using a '_' separator"),
+        FindingSpec("4️⃣", message: "group every 3 digits in this decimal literal using a '_' separator"),
+        FindingSpec("5️⃣", message: "group every 3 digits in this decimal literal using a '_' separator"),
+        FindingSpec("6️⃣", message: "group every 4 digits in this hexadecimal literal using a '_' separator"),
+        FindingSpec("7️⃣", message: "group every 8 digits in this binary literal using a '_' separator"),
+        FindingSpec("8️⃣", message: "group every 4 digits in this hexadecimal literal using a '_' separator"),
+        FindingSpec("9️⃣", message: "group every 4 digits in this hexadecimal literal using a '_' separator"),
       ]
     )
   }

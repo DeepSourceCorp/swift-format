@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 final class SubscriptExprTests: PrettyPrintTestCase {
   func testBasicSubscriptGetters() {
     let input =
@@ -65,14 +77,14 @@ final class SubscriptExprTests: PrettyPrintTestCase {
 
   func testSubscriptSettersWithTrailingClosures() {
     let input =
-    """
+      """
       myCollection[index] { $0 < $1 } = someValue
       myCollection[label: index] { arg1, arg2 in foo() } = someValue
       myCollection[index, default: someDefaultValue] { arg1, arg2 in foo() } = someValue
       """
 
     let expected =
-    """
+      """
       myCollection[index] { $0 < $1 } = someValue
       myCollection[label: index] { arg1, arg2 in
         foo()

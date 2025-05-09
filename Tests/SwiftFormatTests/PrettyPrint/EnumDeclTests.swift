@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class EnumDeclTests: PrettyPrintTestCase {
   func testBasicEnumDeclarations() {
@@ -285,7 +297,7 @@ final class EnumDeclTests: PrettyPrintTestCase {
 
   func testEnumWhereClause_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       enum MyEnum<S, T> where S: Collection {
         case firstCase
         let B: Double
@@ -301,7 +313,7 @@ final class EnumDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       enum MyEnum<S, T> where S: Collection {
         case firstCase
         let B: Double
@@ -373,7 +385,7 @@ final class EnumDeclTests: PrettyPrintTestCase {
 
   func testEnumWhereClauseWithInheritance_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       enum MyEnum<S, T>: ProtoOne where S: Collection {
         case firstCase
         let B: Double
@@ -389,7 +401,7 @@ final class EnumDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       enum MyEnum<S, T>: ProtoOne where S: Collection {
         case firstCase
         let B: Double
@@ -501,7 +513,7 @@ final class EnumDeclTests: PrettyPrintTestCase {
 
   func testEnumFullWrap_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       public enum MyEnum<BaseCollection, SecondCollection>: MyContainerProtocolOne, MyContainerProtocolTwo, SomeoneElsesContainerProtocol, SomeFrameworkContainerProtocol where BaseCollection: Collection, BaseCollection: P, BaseCollection.Element: Equatable, BaseCollection.Element: SomeOtherProtocol {
         case firstCase
         let B: Double
@@ -510,7 +522,7 @@ final class EnumDeclTests: PrettyPrintTestCase {
 
     let expected =
 
-    """
+      """
       public enum MyEnum<
         BaseCollection, SecondCollection
       >: MyContainerProtocolOne, MyContainerProtocolTwo,
@@ -558,5 +570,17 @@ final class EnumDeclTests: PrettyPrintTestCase {
   func testOneMemberEnum() {
     let input = "enum Foo { var bar: Int }"
     assertPrettyPrintEqual(input: input, expected: input + "\n", linelength: 50)
+  }
+
+  func testEnumWithPrioritizeKeepingFunctionOutputTogetherFlag() {
+    let input = """
+      enum Error {
+        case alreadyOpen(Int)
+      }
+
+      """
+    var config = Configuration.forTesting
+    config.prioritizeKeepingFunctionOutputTogether = true
+    assertPrettyPrintEqual(input: input, expected: input, linelength: 50, configuration: config)
   }
 }

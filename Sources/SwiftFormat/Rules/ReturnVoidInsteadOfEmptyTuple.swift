@@ -35,7 +35,8 @@ public final class ReturnVoidInsteadOfEmptyTuple: SyntaxFormatRule {
     // still diagnose it as a lint error but we don't replace it because it's not obvious where the
     // comment should go.
     if hasNonWhitespaceTrivia(returnType.leftParen, at: .trailing)
-        || hasNonWhitespaceTrivia(returnType.rightParen, at: .leading) {
+      || hasNonWhitespaceTrivia(returnType.rightParen, at: .leading)
+    {
       return super.visit(node)
     }
 
@@ -50,7 +51,8 @@ public final class ReturnVoidInsteadOfEmptyTuple: SyntaxFormatRule {
   }
 
   public override func visit(_ node: ClosureSignatureSyntax) -> ClosureSignatureSyntax {
-    guard let returnClause = node.returnClause,
+    guard
+      let returnClause = node.returnClause,
       let returnType = returnClause.type.as(TupleTypeSyntax.self),
       returnType.elements.count == 0
     else {
@@ -63,7 +65,8 @@ public final class ReturnVoidInsteadOfEmptyTuple: SyntaxFormatRule {
     // still diagnose it as a lint error but we don't replace it because it's not obvious where the
     // comment should go.
     if hasNonWhitespaceTrivia(returnType.leftParen, at: .trailing)
-        || hasNonWhitespaceTrivia(returnType.rightParen, at: .leading) {
+      || hasNonWhitespaceTrivia(returnType.rightParen, at: .leading)
+    {
       return super.visit(node)
     }
 
@@ -80,7 +83,14 @@ public final class ReturnVoidInsteadOfEmptyTuple: SyntaxFormatRule {
       closureParameterClause = node.parameterClause
     }
     let voidKeyword = makeVoidIdentifierType(toReplace: returnType)
-    return node.with(\.parameterClause, closureParameterClause).with(\.returnClause, returnClause.with(\.type, TypeSyntax(voidKeyword)))
+
+    var newReturnClause = returnClause
+    newReturnClause.type = TypeSyntax(voidKeyword)
+
+    var result = node
+    result.parameterClause = closureParameterClause
+    result.returnClause = newReturnClause
+    return result
   }
 
   /// Returns a value indicating whether the leading trivia of the given token contained any
@@ -99,18 +109,18 @@ public final class ReturnVoidInsteadOfEmptyTuple: SyntaxFormatRule {
 
   /// Returns a type syntax node with the identifier `Void` whose leading and trailing trivia have
   /// been copied from the tuple type syntax node it is replacing.
-  private func makeVoidIdentifierType(toReplace node: TupleTypeSyntax) -> IdentifierTypeSyntax
-  {
+  private func makeVoidIdentifierType(toReplace node: TupleTypeSyntax) -> IdentifierTypeSyntax {
     return IdentifierTypeSyntax(
       name: TokenSyntax.identifier(
         "Void",
         leadingTrivia: node.firstToken(viewMode: .sourceAccurate)?.leadingTrivia ?? [],
-        trailingTrivia: node.lastToken(viewMode: .sourceAccurate)?.trailingTrivia ?? []),
-      genericArgumentClause: nil)
+        trailingTrivia: node.lastToken(viewMode: .sourceAccurate)?.trailingTrivia ?? []
+      ),
+      genericArgumentClause: nil
+    )
   }
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let returnVoid: Finding.Message = "replace '()' with 'Void'"
+  fileprivate static let returnVoid: Finding.Message = "replace '()' with 'Void'"
 }

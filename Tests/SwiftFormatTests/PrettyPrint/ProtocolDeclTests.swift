@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class ProtocolDeclTests: PrettyPrintTestCase {
   func testBasicProtocolDeclarations() {
@@ -89,7 +101,6 @@ final class ProtocolDeclTests: PrettyPrintTestCase {
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 50)
   }
 
-
   func testProtocolAttributes() {
     let input =
       """
@@ -152,7 +163,7 @@ final class ProtocolDeclTests: PrettyPrintTestCase {
         func doStuff(firstArg: Foo, second second: Bar, third third: Baz) -> Output
       }
       """
-    
+
     let expected =
       """
       protocol MyProtocol {
@@ -177,7 +188,7 @@ final class ProtocolDeclTests: PrettyPrintTestCase {
       }
 
       """
-    
+
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 30)
   }
 
@@ -189,7 +200,7 @@ final class ProtocolDeclTests: PrettyPrintTestCase {
         init(reallyLongLabel: Int, anotherLongLabel: Bool)
       }
       """
-    
+
     let expected =
       """
       protocol MyProtocol {
@@ -200,7 +211,7 @@ final class ProtocolDeclTests: PrettyPrintTestCase {
       }
 
       """
-    
+
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 30)
   }
 

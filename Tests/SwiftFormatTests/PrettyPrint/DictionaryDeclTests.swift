@@ -1,3 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 import SwiftFormat
 import SwiftSyntax
 import _SwiftFormatTestSupport
@@ -59,16 +71,16 @@ final class DictionaryDeclTests: PrettyPrintTestCase {
       ]
 
       """
-      // Ideally, this dictionary would be left on 1 line without a trailing comma. We don't know if
-      // the comma is required when calculating the length of elements, so the comma's length is
-      // always added to last element and that 1 character causes the newlines inside of the
-      // dictionary.
-      + """
-      let a = [
-        10000: "abc", 20000: "def", 30000: "ghi",
-      ]
+        // Ideally, this dictionary would be left on 1 line without a trailing comma. We don't know if
+        // the comma is required when calculating the length of elements, so the comma's length is
+        // always added to last element and that 1 character causes the newlines inside of the
+        // dictionary.
+        + """
+        let a = [
+          10000: "abc", 20000: "def", 30000: "ghi",
+        ]
 
-      """
+        """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 50)
   }
@@ -277,16 +289,16 @@ final class DictionaryDeclTests: PrettyPrintTestCase {
       ]
 
       """
-      // Ideally, this dictionary would be left on 1 line without a trailing comma. We don't know if
-      // the comma is required when calculating the length of elements, so the comma's length is
-      // always added to last element and that 1 character causes the newlines inside of the
-      // dictionary.
-      + """
-      a = [
-        k1: ("ab", "z"), k2: ("bc", "y"),
-      ]
+        // Ideally, this dictionary would be left on 1 line without a trailing comma. We don't know if
+        // the comma is required when calculating the length of elements, so the comma's length is
+        // always added to last element and that 1 character causes the newlines inside of the
+        // dictionary.
+        + """
+        a = [
+          k1: ("ab", "z"), k2: ("bc", "y"),
+        ]
 
-      """
+        """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 38)
   }

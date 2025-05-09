@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class IfConfigTests: PrettyPrintTestCase {
   func testBasicIfConfig() {
@@ -515,5 +527,46 @@ final class IfConfigTests: PrettyPrintTestCase {
       """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 45)
+  }
+
+  func testPostfixPoundIfInParameterList() {
+    let input =
+      """
+      print(
+        32
+          #if true
+            .foo
+          #endif
+        , 22
+      )
+
+      """
+    assertPrettyPrintEqual(input: input, expected: input, linelength: 45)
+  }
+
+  func testNestedPoundIfInSwitchStatement() {
+    let input =
+      """
+      switch self {
+      #if os(iOS) || os(tvOS) || os(watchOS)
+      case .a:
+        return 40
+      #if os(iOS) || os(tvOS)
+      case .e:
+        return 30
+      #endif
+      #if os(iOS)
+      case .g:
+        return 2
+      #endif
+      #endif
+      default:
+        return nil
+      }
+
+      """
+    var configuration = Configuration.forTesting
+    configuration.indentConditionalCompilationBlocks = false
+    assertPrettyPrintEqual(input: input, expected: input, linelength: 45, configuration: configuration)
   }
 }

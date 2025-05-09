@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 final class NeverForceUnwrapTests: LintOrFormatRuleTestCase {
   func testUnsafeUnwrap() {
@@ -36,6 +47,25 @@ final class NeverForceUnwrapTests: LintOrFormatRuleTestCase {
       import XCTest
 
       var b = a as! Int
+      """,
+      findings: []
+    )
+  }
+
+  func testIgnoreTestAttributeFunction() {
+    assertLint(
+      NeverForceUnwrap.self,
+      """
+      @Test
+      func testSomeFunc() {
+        var b = a as! Int
+      }
+      @Test
+      func testAnotherFunc() {
+        func nestedFunc() {
+          let c = someValue()!
+        }
+      }
       """,
       findings: []
     )

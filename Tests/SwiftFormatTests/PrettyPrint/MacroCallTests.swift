@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class MacroCallTests: PrettyPrintTestCase {
   func testNoWhiteSpaceAfterMacroWithoutTrailingClosure() {
@@ -113,5 +125,17 @@ final class MacroCallTests: PrettyPrintTestCase {
       """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 45)
+  }
+
+  func testMacroDeclWithAttributesAndArguments() {
+    let input = """
+      @nonsenseAttribute
+      @available(iOS 17.0, *)
+      #Preview("Name") {
+        EmptyView()
+      }
+
+      """
+    assertPrettyPrintEqual(input: input, expected: input, linelength: 45)
   }
 }

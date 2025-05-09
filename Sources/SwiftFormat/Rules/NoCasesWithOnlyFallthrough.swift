@@ -28,7 +28,7 @@ public final class NoCasesWithOnlyFallthrough: SyntaxFormatRule {
     /// Flushes any un-collapsed violations to the new cases list.
     func flushViolations() {
       fallthroughOnlyCases.forEach {
-        newChildren.append(.switchCase(super.visit($0)))
+        newChildren.append(.switchCase(visit($0)))
       }
       fallthroughOnlyCases.removeAll()
     }
@@ -57,7 +57,8 @@ public final class NoCasesWithOnlyFallthrough: SyntaxFormatRule {
         if canMergeWithPreviousCases(switchCase) {
           // If the current case can be merged with the ones before it, merge them all, leaving no
           // `fallthrough`-only cases behind.
-          newChildren.append(.switchCase(visit(mergedCases(fallthroughOnlyCases + [switchCase]))))
+          let newSwitchCase = visit(switchCase)
+          newChildren.append(.switchCase(visit(mergedCases(fallthroughOnlyCases + [newSwitchCase]))))
         } else {
           // If the current case can't be merged with the ones before it, merge the previous ones
           // into a single `fallthrough`-only case and then append the current one. This could
@@ -139,19 +140,20 @@ public final class NoCasesWithOnlyFallthrough: SyntaxFormatRule {
     }
 
     // Check for any comments that are adjacent to the case or fallthrough statement.
-    if switchCase.leadingTrivia.drop(while: { !$0.isNewline }).contains(where: { $0.isComment })
+    if switchCase.allPrecedingTrivia
+      .drop(while: { !$0.isNewline }).contains(where: { $0.isComment })
     {
       return false
     }
-    if onlyStatement.leadingTrivia.drop(while: { !$0.isNewline }).contains(where: { $0.isComment })
+    if onlyStatement.allPrecedingTrivia
+      .drop(while: { !$0.isNewline }).contains(where: { $0.isComment })
     {
       return false
     }
 
-    // Check for any comments that are inline on the fallthrough statement. Inline comments are
-    // always stored in the next token's leading trivia.
-    if let nextLeadingTrivia = onlyStatement.nextToken(viewMode: .sourceAccurate)?.leadingTrivia,
-      nextLeadingTrivia.prefix(while: { !$0.isNewline }).contains(where: { $0.isComment })
+    // Check for any comments that are inline on the fallthrough statement.
+    if onlyStatement.allFollowingTrivia
+      .prefix(while: { !$0.isNewline }).contains(where: { $0.isComment })
     {
       return false
     }
@@ -171,28 +173,32 @@ public final class NoCasesWithOnlyFallthrough: SyntaxFormatRule {
     var newCaseItems: [SwitchCaseItemSyntax] = []
     let labels = cases.lazy.compactMap({ $0.label.as(SwitchCaseLabelSyntax.self) })
     for label in labels.dropLast() {
-      // We can blindly append all but the last case item because they must already have a trailing
-      // comma. Then, we need to add a trailing comma to the last one, since it will be followed by
-      // more items.
-      newCaseItems.append(contentsOf: label.caseItems.dropLast())
-      newCaseItems.append(
-        label.caseItems.last!.with(
-          \.trailingComma, 
-          TokenSyntax.commaToken(trailingTrivia: .spaces(1))))
-
       // Diagnose the cases being collapsed. We do this for all but the last one in the array; the
       // last one isn't diagnosed because it will contain the body that applies to all the previous
       // cases.
       diagnose(.collapseCase, on: label)
+
+      // We can blindly append all but the last case item because they must already have a trailing
+      // comma. Then, we need to add a trailing comma to the last one, since it will be followed by
+      // more items.
+      newCaseItems.append(contentsOf: label.caseItems.dropLast())
+
+      var lastItem = label.caseItems.last!
+      lastItem.trailingComma = TokenSyntax.commaToken(trailingTrivia: [.spaces(1)])
+      newCaseItems.append(lastItem)
     }
     newCaseItems.append(contentsOf: labels.last!.caseItems)
 
-    let newCase = cases.last!.with(\.label, .case(
-      labels.last!.with(\.caseItems, SwitchCaseItemListSyntax(newCaseItems))))
+    var lastLabel = labels.last!
+    lastLabel.caseItems = SwitchCaseItemListSyntax(newCaseItems)
+
+    var lastCase = cases.last!
+    lastCase.label = .case(lastLabel)
 
     // Only the first violation case can have displaced trivia, because any non-whitespace
     // trivia in the other violation cases would've prevented collapsing.
-    return newCase.with(\.leadingTrivia, cases.first!.leadingTrivia.withoutLastLine() + newCase.leadingTrivia)
+    lastCase.leadingTrivia = cases.first!.leadingTrivia.withoutLastLine() + lastCase.leadingTrivia
+    return lastCase
   }
 }
 
@@ -219,8 +225,7 @@ extension TriviaPiece {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static var collapseCase: Finding.Message {
+  fileprivate static var collapseCase: Finding.Message {
     "combine this fallthrough-only 'case' and the following 'case' into a single 'case'"
   }
 }

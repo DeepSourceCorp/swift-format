@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class ExtensionDeclTests: PrettyPrintTestCase {
   func testBasicExtensionDeclarations() {
@@ -122,7 +134,7 @@ final class ExtensionDeclTests: PrettyPrintTestCase {
 
   func testExtensionWhereClause_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       extension MyExtension where S: Collection {
         let A: Int
         let B: Double
@@ -138,7 +150,7 @@ final class ExtensionDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       extension MyExtension where S: Collection {
         let A: Int
         let B: Double
@@ -210,7 +222,7 @@ final class ExtensionDeclTests: PrettyPrintTestCase {
 
   func testExtensionWhereClauseWithInheritance_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       extension MyExtension: ProtoOne where S: Collection {
         let A: Int
         let B: Double
@@ -226,7 +238,7 @@ final class ExtensionDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       extension MyExtension: ProtoOne where S: Collection {
         let A: Int
         let B: Double
@@ -336,7 +348,7 @@ final class ExtensionDeclTests: PrettyPrintTestCase {
 
   func testExtensionFullWrap_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       public extension MyContainer: MyContainerProtocolOne, MyContainerProtocolTwo, SomeoneElsesContainerProtocol, SomeFrameworkContainerProtocol where BaseCollection: Collection, BaseCollection: P, BaseCollection.Element: Equatable, BaseCollection.Element: SomeOtherProtocol {
         let A: Int
         let B: Double
@@ -345,7 +357,7 @@ final class ExtensionDeclTests: PrettyPrintTestCase {
 
     let expected =
 
-    """
+      """
       public extension MyContainer:
         MyContainerProtocolOne, MyContainerProtocolTwo,
         SomeoneElsesContainerProtocol,

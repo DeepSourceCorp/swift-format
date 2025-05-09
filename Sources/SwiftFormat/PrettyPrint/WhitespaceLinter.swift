@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import SwiftFormatConfiguration
 import SwiftSyntax
 
 private let utf8Newline = UTF8.CodeUnit(ascii: "\n")
@@ -60,7 +59,8 @@ public class WhitespaceLinter {
       assert(
         safeCodeUnit(at: userWhitespace.endIndex, in: userText)
           == safeCodeUnit(at: formattedWhitespace.endIndex, in: formattedText),
-        "Non-whitespace characters do not match")
+        "Non-whitespace characters do not match"
+      )
 
       compareWhitespace(userWhitespace: userWhitespace, formattedWhitespace: formattedWhitespace)
 
@@ -83,7 +83,8 @@ public class WhitespaceLinter {
   ///   - formattedWhitespace: A slice of formatted text representing the current span of contiguous
   ///     whitespace that will be compared to the user whitespace.
   private func compareWhitespace(
-    userWhitespace: ArraySlice<UTF8.CodeUnit>, formattedWhitespace: ArraySlice<UTF8.CodeUnit>
+    userWhitespace: ArraySlice<UTF8.CodeUnit>,
+    formattedWhitespace: ArraySlice<UTF8.CodeUnit>
   ) {
     // We use a custom-crafted lazy-splitting iterator here instead of the standard
     // `Collection.split` function because Time Profiler indicated that a very large proportion of
@@ -98,7 +99,8 @@ public class WhitespaceLinter {
       userIndex: userWhitespace.startIndex,
       formattedIndex: formattedWhitespace.startIndex,
       userRuns: userRuns,
-      formattedRuns: formattedRuns)
+      formattedRuns: formattedRuns
+    )
 
     // No need to perform any further checks if the whitespace is identical.
     guard userWhitespace != formattedWhitespace else { return }
@@ -136,7 +138,10 @@ public class WhitespaceLinter {
             // If this isn't the last whitespace run, then it must precede a newline, so we check
             // for trailing whitespace violations.
             checkForTrailingWhitespaceErrors(
-              userIndex: userIndex, userRun: userRun, formattedRun: formattedRun)
+              userIndex: userIndex,
+              userRun: userRun,
+              formattedRun: formattedRun
+            )
           }
           userIndex += userRun.count + 1
         }
@@ -153,7 +158,8 @@ public class WhitespaceLinter {
         checkForIndentationErrors(
           userIndex: userIndex,
           userRun: userRunsIterator.latestElement!,
-          formattedRun: lastFormattedRun)
+          formattedRun: lastFormattedRun
+        )
       }
     }
 
@@ -164,7 +170,8 @@ public class WhitespaceLinter {
       diagnose(
         .addLinesError(excessFormattedLines),
         category: .addLines,
-        utf8Offset: userWhitespace.startIndex)
+        utf8Offset: userWhitespace.startIndex
+      )
     }
   }
 
@@ -258,7 +265,9 @@ public class WhitespaceLinter {
   ///   - userRun: A run of whitespace from the user text.
   ///   - formattedRun: A run of whitespace from the formatted text.
   private func checkForIndentationErrors(
-    userIndex: Int, userRun: ArraySlice<UTF8.CodeUnit>, formattedRun: ArraySlice<UTF8.CodeUnit>
+    userIndex: Int,
+    userRun: ArraySlice<UTF8.CodeUnit>,
+    formattedRun: ArraySlice<UTF8.CodeUnit>
   ) {
     guard userRun != formattedRun else { return }
 
@@ -267,7 +276,8 @@ public class WhitespaceLinter {
     diagnose(
       .indentationError(expected: expected, actual: actual),
       category: .indentation,
-      utf8Offset: userIndex)
+      utf8Offset: userIndex
+    )
   }
 
   /// Compare user and formatted whitespace buffers, and check for trailing whitespace.
@@ -277,7 +287,9 @@ public class WhitespaceLinter {
   ///   - userRun: The tokenized user whitespace buffer.
   ///   - formattedRun: The tokenized formatted whitespace buffer.
   private func checkForTrailingWhitespaceErrors(
-    userIndex: Int, userRun: ArraySlice<UTF8.CodeUnit>, formattedRun: ArraySlice<UTF8.CodeUnit>
+    userIndex: Int,
+    userRun: ArraySlice<UTF8.CodeUnit>,
+    formattedRun: ArraySlice<UTF8.CodeUnit>
   ) {
     if userRun != formattedRun {
       diagnose(.trailingWhitespaceError, category: .trailingWhitespace, utf8Offset: userIndex)
@@ -295,7 +307,9 @@ public class WhitespaceLinter {
   ///   - userRun: The tokenized user whitespace buffer.
   ///   - formattedRun: The tokenized formatted whitespace buffer.
   private func checkForSpacingErrors(
-    userIndex: Int, userRun: ArraySlice<UTF8.CodeUnit>, formattedRun: ArraySlice<UTF8.CodeUnit>
+    userIndex: Int,
+    userRun: ArraySlice<UTF8.CodeUnit>,
+    formattedRun: ArraySlice<UTF8.CodeUnit>
   ) {
     guard userRun != formattedRun else { return }
 
@@ -321,11 +335,12 @@ public class WhitespaceLinter {
   ///   - data: The input string.
   /// - Returns: A slice of `data` that covers the contiguous whitespace starting at the given
   ///   index.
-  private func contiguousWhitespace(startingAt offset: Int, in data: [UTF8.CodeUnit])
-    -> ArraySlice<UTF8.CodeUnit>
-  {
-    guard let whitespaceEnd =
-      data[offset...].firstIndex(where: { !UnicodeScalar($0).properties.isWhitespace })
+  private func contiguousWhitespace(
+    startingAt offset: Int,
+    in data: [UTF8.CodeUnit]
+  ) -> ArraySlice<UTF8.CodeUnit> {
+    guard
+      let whitespaceEnd = data[offset...].firstIndex(where: { !$0.isWhitespace })
     else {
       return data[offset..<data.endIndex]
     }
@@ -355,7 +370,10 @@ public class WhitespaceLinter {
     let absolutePosition = AbsolutePosition(utf8Offset: utf8Offset)
     let sourceLocation = context.sourceLocationConverter.location(for: absolutePosition)
     context.findingEmitter.emit(
-      message, category: category, location: Finding.Location(sourceLocation))
+      message,
+      category: category,
+      location: Finding.Location(sourceLocation)
+    )
   }
 
   /// Returns the indentation that represents the indentation of the given whitespace, which is the
@@ -433,9 +451,9 @@ extension WhitespaceIndentation {
 }
 
 extension Finding.Message {
-  public static let trailingWhitespaceError: Finding.Message = "remove trailing whitespace"
+  fileprivate static let trailingWhitespaceError: Finding.Message = "remove trailing whitespace"
 
-  public static func indentationError(
+  fileprivate static func indentationError(
     expected expectedIndentation: WhitespaceIndentation,
     actual actualIndentation: WhitespaceIndentation
   ) -> Finding.Message {
@@ -471,17 +489,20 @@ extension Finding.Message {
     }
   }
 
-  public static func spacingError(_ spaces: Int) -> Finding.Message {
+  fileprivate static func spacingError(_ spaces: Int) -> Finding.Message {
     let verb = spaces > 0 ? "add" : "remove"
     let noun = abs(spaces) == 1 ? "space" : "spaces"
     return "\(verb) \(abs(spaces)) \(noun)"
   }
 
-  public static let spacingCharError: Finding.Message = "use spaces for spacing"
+  fileprivate static let spacingCharError: Finding.Message = "use spaces for spacing"
 
-  public static let removeLineError: Finding.Message = "remove line break"
+  fileprivate static let removeLineError: Finding.Message = "remove line break"
 
-  public static func addLinesError(_ lines: Int) -> Finding.Message { "add \(lines) line breaks" }
+  fileprivate static func addLinesError(_ lines: Int) -> Finding.Message {
+    let noun = lines == 1 ? "break" : "breaks"
+    return "add \(lines) line \(noun)"
+  }
 
-  public static let lineLengthError: Finding.Message = "line is too long"
+  fileprivate static let lineLengthError: Finding.Message = "line is too long"
 }

@@ -17,6 +17,7 @@ import SwiftSyntax
 ///
 /// This rule does not apply to test code, defined as code which:
 ///   * Contains the line `import XCTest`
+///   * The function is marked with `@Test` attribute
 ///
 /// Lint: If an identifier contains underscores or begins with a capital letter, a lint error is
 ///       raised.
@@ -46,7 +47,7 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
     // Don't diagnose any issues when the variable is overriding, because this declaration can't
     // rename the variable. If the user analyzes the code where the variable is really declared,
     // then the diagnostic can be raised for just that location.
-    if node.modifiers.has(modifier: "override") {
+    if node.modifiers.contains(anyOf: [.override]) {
       return .visitChildren
     }
 
@@ -55,7 +56,10 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
         continue
       }
       diagnoseLowerCamelCaseViolations(
-        pat.identifier, allowUnderscores: false, description: identifierDescription(for: node))
+        pat.identifier,
+        allowUnderscores: false,
+        description: identifierDescription(for: node)
+      )
     }
     return .visitChildren
   }
@@ -65,7 +69,10 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
       return .visitChildren
     }
     diagnoseLowerCamelCaseViolations(
-      pattern.identifier, allowUnderscores: false, description: identifierDescription(for: node))
+      pattern.identifier,
+      allowUnderscores: false,
+      description: identifierDescription(for: node)
+    )
     return .visitChildren
   }
 
@@ -74,35 +81,24 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
       if let closureParamList = input.as(ClosureShorthandParameterListSyntax.self) {
         for param in closureParamList {
           diagnoseLowerCamelCaseViolations(
-            param.name, allowUnderscores: false, description: identifierDescription(for: node))
+            param.name,
+            allowUnderscores: false,
+            description: identifierDescription(for: node)
+          )
         }
       } else if let parameterClause = input.as(ClosureParameterClauseSyntax.self) {
         for param in parameterClause.parameters {
           diagnoseLowerCamelCaseViolations(
-            param.firstName, allowUnderscores: false, description: identifierDescription(for: node))
+            param.firstName,
+            allowUnderscores: false,
+            description: identifierDescription(for: node)
+          )
           if let secondName = param.secondName {
             diagnoseLowerCamelCaseViolations(
-              secondName, allowUnderscores: false, description: identifierDescription(for: node))
-          }
-        }
-      } else if let parameterClause = input.as(EnumCaseParameterClauseSyntax.self) {
-        for param in parameterClause.parameters {
-          if let firstName = param.firstName {
-            diagnoseLowerCamelCaseViolations(
-              firstName, allowUnderscores: false, description: identifierDescription(for: node))
-          }
-          if let secondName = param.secondName {
-            diagnoseLowerCamelCaseViolations(
-              secondName, allowUnderscores: false, description: identifierDescription(for: node))
-          }
-        }
-      } else if let parameterClause = input.as(FunctionParameterClauseSyntax.self) {
-        for param in parameterClause.parameters {
-          diagnoseLowerCamelCaseViolations(
-            param.firstName, allowUnderscores: false, description: identifierDescription(for: node))
-          if let secondName = param.secondName {
-            diagnoseLowerCamelCaseViolations(
-              secondName, allowUnderscores: false, description: identifierDescription(for: node))
+              secondName,
+              allowUnderscores: false,
+              description: identifierDescription(for: node)
+            )
           }
         }
       }
@@ -114,24 +110,33 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
     // Don't diagnose any issues when the function is overriding, because this declaration can't
     // rename the function. If the user analyzes the code where the function is really declared,
     // then the diagnostic can be raised for just that location.
-    if node.modifiers.has(modifier: "override") {
+    if node.modifiers.contains(anyOf: [.override]) {
       return .visitChildren
     }
 
     // We allow underscores in test names, because there's an existing convention of using
     // underscores to separate phrases in very detailed test names.
-    let allowUnderscores = testCaseFuncs.contains(node)
+    let allowUnderscores = testCaseFuncs.contains(node) || node.hasAttribute("Test", inModule: "Testing")
+
     diagnoseLowerCamelCaseViolations(
-      node.name, allowUnderscores: allowUnderscores,
-      description: identifierDescription(for: node))
+      node.name,
+      allowUnderscores: allowUnderscores,
+      description: identifierDescription(for: node)
+    )
     for param in node.signature.parameterClause.parameters {
       // These identifiers aren't described using `identifierDescription(for:)` because no single
       // node can disambiguate the argument label from the parameter name.
       diagnoseLowerCamelCaseViolations(
-        param.firstName, allowUnderscores: false, description: "argument label")
+        param.firstName,
+        allowUnderscores: false,
+        description: "argument label"
+      )
       if let paramName = param.secondName {
         diagnoseLowerCamelCaseViolations(
-          paramName, allowUnderscores: false, description: "function parameter")
+          paramName,
+          allowUnderscores: false,
+          description: "function parameter"
+        )
       }
     }
     return .visitChildren
@@ -139,7 +144,10 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
 
   public override func visit(_ node: EnumCaseElementSyntax) -> SyntaxVisitorContinueKind {
     diagnoseLowerCamelCaseViolations(
-      node.name, allowUnderscores: false, description: identifierDescription(for: node))
+      node.name,
+      allowUnderscores: false,
+      description: identifierDescription(for: node)
+    )
     return .skipChildren
   }
 
@@ -171,7 +179,9 @@ public final class AlwaysUseLowerCamelCase: SyntaxLintRule {
   }
 
   private func diagnoseLowerCamelCaseViolations(
-    _ identifier: TokenSyntax, allowUnderscores: Bool, description: String
+    _ identifier: TokenSyntax,
+    allowUnderscores: Bool,
+    description: String
   ) {
     guard case .identifier(let text) = identifier.tokenKind else { return }
     if text.isEmpty { return }
@@ -214,9 +224,9 @@ extension ReturnClauseSyntax {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func nameMustBeLowerCamelCase(
-    _ name: String, description: String
+  fileprivate static func nameMustBeLowerCamelCase(
+    _ name: String,
+    description: String
   ) -> Finding.Message {
     "rename the \(description) '\(name)' using lowerCamelCase"
   }

@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class FunctionDeclTests: PrettyPrintTestCase {
   func testBasicFunctionDeclarations_noPackArguments() {
@@ -359,7 +371,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
 
   func testFunctionWhereClause_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       public func index<Elements: Collection, Element>(
         of element: Element, in collection: Elements
       ) -> Elements.Index? where Elements.Element == Element {
@@ -385,7 +397,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       public func index<Elements: Collection, Element>(
         of element: Element, in collection: Elements
       ) -> Elements.Index?
@@ -446,7 +458,6 @@ final class FunctionDeclTests: PrettyPrintTestCase {
         return 0
       }
       """
-
 
     let expected =
       """
@@ -556,67 +567,67 @@ final class FunctionDeclTests: PrettyPrintTestCase {
 
   func testFunctionFullWrap() {
     let input =
-    """
-    @discardableResult @objc
-    public func index<Elements: Collection, Element>(of element: Element, in collection: Elements) -> Elements.Index? where Element: Foo, Element: Bar, Elements.Element == Element  {
-      let a = 123
-      let b = "abc"
-    }
-    """
+      """
+      @discardableResult @objc
+      public func index<Elements: Collection, Element>(of element: Element, in collection: Elements) -> Elements.Index? where Element: Foo, Element: Bar, Elements.Element == Element  {
+        let a = 123
+        let b = "abc"
+      }
+      """
 
     let expected =
-    """
-    @discardableResult @objc
-    public func index<
-      Elements: Collection,
-      Element
-    >(
-      of element: Element,
-      in collection: Elements
-    ) -> Elements.Index?
-    where
-      Element: Foo, Element: Bar,
-      Elements.Element == Element
-    {
-      let a = 123
-      let b = "abc"
-    }
+      """
+      @discardableResult @objc
+      public func index<
+        Elements: Collection,
+        Element
+      >(
+        of element: Element,
+        in collection: Elements
+      ) -> Elements.Index?
+      where
+        Element: Foo, Element: Bar,
+        Elements.Element == Element
+      {
+        let a = 123
+        let b = "abc"
+      }
 
-    """
+      """
 
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 30)
   }
 
   func testFunctionFullWrap_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
-    @discardableResult @objc
-    public func index<Elements: Collection, Element>(of element: Element, in collection: Elements) -> Elements.Index? where Element: Foo, Element: Bar, Elements.Element == Element  {
-      let a = 123
-      let b = "abc"
-    }
-    """
+      """
+      @discardableResult @objc
+      public func index<Elements: Collection, Element>(of element: Element, in collection: Elements) -> Elements.Index? where Element: Foo, Element: Bar, Elements.Element == Element  {
+        let a = 123
+        let b = "abc"
+      }
+      """
 
     let expected =
-    """
-    @discardableResult @objc
-    public func index<
-      Elements: Collection,
-      Element
-    >(
-      of element: Element,
-      in collection: Elements
-    ) -> Elements.Index?
-    where
-      Element: Foo,
-      Element: Bar,
-      Elements.Element == Element
-    {
-      let a = 123
-      let b = "abc"
-    }
+      """
+      @discardableResult @objc
+      public func index<
+        Elements: Collection,
+        Element
+      >(
+        of element: Element,
+        in collection: Elements
+      ) -> Elements.Index?
+      where
+        Element: Foo,
+        Element: Bar,
+        Elements.Element == Element
+      {
+        let a = 123
+        let b = "abc"
+      }
 
-    """
+      """
 
     var config = Configuration.forTesting
     config.lineBreakBeforeEachGenericRequirement = true
@@ -626,7 +637,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
   func testEmptyFunction() {
     let input = "func foo() {}"
     assertPrettyPrintEqual(input: input, expected: input + "\n", linelength: 50)
-    
+
     let wrapped = """
       func foo() {
       }
@@ -703,7 +714,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 23)
 
     expected =
-    """
+      """
       func name<R>(_ x: Int) throws
         -> R
 
@@ -721,7 +732,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
 
   func testBreaksBeforeOrInsideOutput_prioritizingKeepingOutputTogether() {
     let input =
-    """
+      """
       func name<R>(_ x: Int) throws -> R
 
       func name<R>(_ x: Int) throws -> R {
@@ -731,7 +742,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
       """
 
     var expected =
-    """
+      """
       func name<R>(
         _ x: Int
       ) throws -> R
@@ -749,19 +760,19 @@ final class FunctionDeclTests: PrettyPrintTestCase {
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 23, configuration: config)
 
     expected =
-    """
-    func name<R>(
-      _ x: Int
-    ) throws -> R
+      """
+      func name<R>(
+        _ x: Int
+      ) throws -> R
 
-    func name<R>(
-      _ x: Int
-    ) throws -> R {
-      statement
-      statement
-    }
+      func name<R>(
+        _ x: Int
+      ) throws -> R {
+        statement
+        statement
+      }
 
-    """
+      """
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 30, configuration: config)
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 33, configuration: config)
   }
@@ -801,7 +812,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
 
   func testBreaksBeforeOrInsideOutputWithAttributes_prioritizingKeepingOutputTogether() {
     let input =
-    """
+      """
       @objc @discardableResult
       func name<R>(_ x: Int) throws -> R
 
@@ -813,7 +824,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       @objc
       @discardableResult
       func name<R>(
@@ -894,7 +905,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
 
   func testBreaksBeforeOrInsideOutputWithWhereClause_prioritizingKeepingOutputTogether() {
     var input =
-    """
+      """
       func name<R>(_ x: Int) throws -> R where Foo == Bar
 
       func name<R>(_ x: Int) throws -> R where Foo == Bar {
@@ -904,7 +915,7 @@ final class FunctionDeclTests: PrettyPrintTestCase {
       """
 
     var expected =
-    """
+      """
       func name<R>(
         _ x: Int
       ) throws -> R
@@ -924,34 +935,34 @@ final class FunctionDeclTests: PrettyPrintTestCase {
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 23, configuration: config)
 
     input =
-    """
-    func name<R>(_ x: Int) throws -> R where Fooooooo == Barrrrr
+      """
+      func name<R>(_ x: Int) throws -> R where Fooooooo == Barrrrr
 
-    func name<R>(_ x: Int) throws -> R where Fooooooo == Barrrrr {
-    statement
-    statement
-    }
-    """
+      func name<R>(_ x: Int) throws -> R where Fooooooo == Barrrrr {
+      statement
+      statement
+      }
+      """
 
     expected =
-    """
-    func name<R>(
-      _ x: Int
-    ) throws -> R
-    where
-      Fooooooo == Barrrrr
+      """
+      func name<R>(
+        _ x: Int
+      ) throws -> R
+      where
+        Fooooooo == Barrrrr
 
-    func name<R>(
-      _ x: Int
-    ) throws -> R
-    where
-      Fooooooo == Barrrrr
-    {
-      statement
-      statement
-    }
+      func name<R>(
+        _ x: Int
+      ) throws -> R
+      where
+        Fooooooo == Barrrrr
+      {
+        statement
+        statement
+      }
 
-    """
+      """
     assertPrettyPrintEqual(input: input, expected: expected, linelength: 23, configuration: config)
   }
 
@@ -1016,24 +1027,24 @@ final class FunctionDeclTests: PrettyPrintTestCase {
 
   func testDoesNotCollapseFunctionParameterAttributes() {
     let input =
-    """
-    func foo<Content: View>(@ViewBuilder bar: () -> View) {
-      bar()
-    }
+      """
+      func foo<Content: View>(@ViewBuilder bar: () -> View) {
+        bar()
+      }
 
-    """
+      """
 
     assertPrettyPrintEqual(input: input, expected: input, linelength: 60)
   }
 
   func testDoesNotCollapseStackedFunctionParameterAttributes() {
     let input =
-    """
-    func foo<Content: View>(@FakeAttr @ViewBuilder bar: () -> View) {
-      bar()
-    }
+      """
+      func foo<Content: View>(@FakeAttr @ViewBuilder bar: () -> View) {
+        bar()
+      }
 
-    """
+      """
 
     assertPrettyPrintEqual(input: input, expected: input, linelength: 80)
   }

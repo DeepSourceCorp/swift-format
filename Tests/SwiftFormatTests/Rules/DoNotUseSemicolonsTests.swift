@@ -1,8 +1,18 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
-// FIXME: Some of the messages suggesting the next statement be moved to a new line are inaccurate.
 final class DoNotUseSemicolonsTests: LintOrFormatRuleTestCase {
   func testSemicolonUse() {
     assertFormatting(
@@ -18,7 +28,7 @@ final class DoNotUseSemicolonsTests: LintOrFormatRuleTestCase {
         """,
       findings: [
         FindingSpec("1️⃣", message: "remove ';' and move the next statement to a new line"),
-        FindingSpec("2️⃣", message: "remove ';' and move the next statement to a new line"),
+        FindingSpec("2️⃣", message: "remove ';'"),
       ]
     )
   }
@@ -35,8 +45,8 @@ final class DoNotUseSemicolonsTests: LintOrFormatRuleTestCase {
       // printer and isn't a concern for the format rule.
       expected: """
         guard let someVar = Optional(items.filter ({ a in foo(a)
-        return true})) else {
-          items.forEach { a in foo(a)}
+        return true })) else {
+          items.forEach { a in foo(a) }
         return
         }
         """,
@@ -73,7 +83,7 @@ final class DoNotUseSemicolonsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "remove ';' and move the next statement to a new line"),
+        FindingSpec("1️⃣", message: "remove ';'"),
         FindingSpec("2️⃣", message: "remove ';' and move the next statement to a new line"),
         FindingSpec("3️⃣", message: "remove ';'"),
       ]
@@ -107,21 +117,86 @@ final class DoNotUseSemicolonsTests: LintOrFormatRuleTestCase {
         print("4")
         /** Inline comment. */ print("5")
 
-        print("6")// This is an important statement.
+        print("6")  // This is an important statement.
         print("7")
         """,
       findings: [
-        FindingSpec("1️⃣", message: "remove ';' and move the next statement to a new line"),
-        FindingSpec("2️⃣", message: "remove ';' and move the next statement to a new line"),
-        FindingSpec("3️⃣", message: "remove ';' and move the next statement to a new line"),
+        FindingSpec("1️⃣", message: "remove ';'"),
+        FindingSpec("2️⃣", message: "remove ';'"),
+        FindingSpec("3️⃣", message: "remove ';'"),
         FindingSpec("4️⃣", message: "remove ';' and move the next statement to a new line"),
-        FindingSpec("5️⃣", message: "remove ';' and move the next statement to a new line"),
-        FindingSpec("6️⃣", message: "remove ';' and move the next statement to a new line"),
+        FindingSpec("5️⃣", message: "remove ';'"),
+        FindingSpec("6️⃣", message: "remove ';'"),
         FindingSpec("7️⃣", message: "remove ';'"),
       ]
     )
   }
-  
+
+  func testBlockCommentAtEndOfBlock() {
+    assertFormatting(
+      DoNotUseSemicolons.self,
+      input: """
+        print("hello")1️⃣; /* block comment */
+        """,
+      expected: """
+        print("hello") /* block comment */
+        """,
+      findings: [
+        FindingSpec("1️⃣", message: "remove ';'")
+      ]
+    )
+
+    assertFormatting(
+      DoNotUseSemicolons.self,
+      input: """
+        if x {
+          print("hello")1️⃣; /* block comment */
+        }
+        """,
+      expected: """
+        if x {
+          print("hello") /* block comment */
+        }
+        """,
+      findings: [
+        FindingSpec("1️⃣", message: "remove ';'")
+      ]
+    )
+  }
+
+  func testBlockCommentAfterSemicolonPrecedingOtherStatement() {
+    assertFormatting(
+      DoNotUseSemicolons.self,
+      input: """
+        print("hello")1️⃣; /* block comment */ print("world")
+        """,
+      expected: """
+        print("hello")
+        /* block comment */ print("world")
+        """,
+      findings: [
+        FindingSpec("1️⃣", message: "remove ';' and move the next statement to a new line")
+      ]
+    )
+
+    assertFormatting(
+      DoNotUseSemicolons.self,
+      input: """
+        if x {
+          print("hello")1️⃣; /* block comment */
+        }
+        """,
+      expected: """
+        if x {
+          print("hello") /* block comment */
+        }
+        """,
+      findings: [
+        FindingSpec("1️⃣", message: "remove ';'")
+      ]
+    )
+  }
+
   func testSemicolonsSeparatingDoWhile() {
     assertFormatting(
       DoNotUseSemicolons.self,
@@ -158,7 +233,7 @@ final class DoNotUseSemicolonsTests: LintOrFormatRuleTestCase {
         for _ in 0..<10 { g() }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "remove ';' and move the next statement to a new line"),
+        FindingSpec("1️⃣", message: "remove ';'")
       ]
     )
   }

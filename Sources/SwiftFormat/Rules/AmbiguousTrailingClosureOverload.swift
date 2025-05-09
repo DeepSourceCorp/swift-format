@@ -29,9 +29,11 @@ public final class AmbiguousTrailingClosureOverload: SyntaxLintRule {
           Finding.Note(
             message: .otherAmbiguousOverloadHere(decl.fullDeclName),
             location: Finding.Location(
-              decl.name.startLocation(converter: self.context.sourceLocationConverter))
+              decl.name.startLocation(converter: self.context.sourceLocationConverter)
+            )
           )
-        })
+        }
+      )
     }
   }
 
@@ -42,7 +44,7 @@ public final class AmbiguousTrailingClosureOverload: SyntaxLintRule {
       let params = fn.signature.parameterClause.parameters
       guard let firstParam = params.firstAndOnly else { continue }
       guard firstParam.type.is(FunctionTypeSyntax.self) else { continue }
-      if fn.modifiers.has(modifier: "static") || fn.modifiers.has(modifier: "class") {
+      if fn.modifiers.contains(anyOf: [.class, .static]) {
         staticOverloads[fn.name.text, default: []].append(fn)
       } else {
         overloads[fn.name.text, default: []].append(fn)
@@ -73,13 +75,11 @@ public final class AmbiguousTrailingClosureOverload: SyntaxLintRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func ambiguousTrailingClosureOverload(_ decl: String) -> Finding.Message {
+  fileprivate static func ambiguousTrailingClosureOverload(_ decl: String) -> Finding.Message {
     "rename '\(decl)' so it is no longer ambiguous when called with a trailing closure"
   }
 
-  @_spi(Rules)
-  public static func otherAmbiguousOverloadHere(_ decl: String) -> Finding.Message {
+  fileprivate static func otherAmbiguousOverloadHere(_ decl: String) -> Finding.Message {
     "ambiguous overload '\(decl)' is here"
   }
 }

@@ -1,12 +1,35 @@
-import SwiftSyntax
-import SwiftParser
-import XCTest
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Testing) import SwiftFormat
+import SwiftParser
+import SwiftSyntax
+import XCTest
 @_spi(Testing) import _SwiftFormatTestSupport
 
 final class WhitespaceLinterPerformanceTests: DiagnosingTestCase {
-  func testWhitespaceLinterPerformance() {
+  /// When executing in Swift CI, run the block to make sure it doesn't hit any assertions because we don't look at
+  /// performance numbers in CI and CI nodes can have variable performance characteristics if they are not bare-metal.
+  ///
+  /// Anywhere else, run XCTest's `measure` function to measure the performance of the block.
+  private func measureIfNotInCI(_ block: () -> Void) {
+    if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] != nil {
+      block()
+    } else {
+      measure { block() }
+    }
+  }
+
+  func testWhitespaceLinterPerformance() throws {
     let input = String(
       repeating: """
         import      SomeModule
@@ -47,7 +70,7 @@ final class WhitespaceLinterPerformanceTests: DiagnosingTestCase {
       count: 20
     )
 
-    measure { performWhitespaceLint(input: input, expected: expected) }
+    measureIfNotInCI { performWhitespaceLint(input: input, expected: expected) }
   }
 
   /// Perform whitespace linting by comparing the input text from the user with the expected
@@ -58,7 +81,11 @@ final class WhitespaceLinterPerformanceTests: DiagnosingTestCase {
   ///   - expected: The formatted text.
   private func performWhitespaceLint(input: String, expected: String) {
     let sourceFileSyntax = Parser.parse(source: input)
-    let context = makeContext(sourceFileSyntax: sourceFileSyntax, findingConsumer: { _ in })
+    let context = makeContext(
+      sourceFileSyntax: sourceFileSyntax,
+      selection: .infinite,
+      findingConsumer: { _ in }
+    )
     let linter = WhitespaceLinter(user: input, formatted: expected, context: context)
     linter.lint()
   }

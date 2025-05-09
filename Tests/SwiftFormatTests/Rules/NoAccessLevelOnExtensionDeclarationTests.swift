@@ -1,34 +1,37 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
-// FIXME: We should have notes on each of the declarations inside the extension that we modify.
-// Also fix the lack of trimming around the extension name, and we should say "extension X" instead
-// of just "X".
 final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
   func testExtensionDeclarationAccessLevel() {
     assertFormatting(
       NoAccessLevelOnExtensionDeclaration.self,
       input: """
         1️⃣public extension Foo {
-          var x: Bool
+          2️⃣var x: Bool
           // Comment 1
           internal var y: Bool
           // Comment 2
-          static var z: Bool
+          3️⃣static var z: Bool
           // Comment 3
-          static func someFunc() {}
-          init() {}
-          subscript(index: Int) -> Element {}
-          protocol SomeProtocol {}
-          class SomeClass {}
-          struct SomeStruct {}
-          enum SomeEnum {}
-          typealias Foo = Bar
-        }
-        2️⃣internal extension Bar {
-          var a: Int
-          var b: Int
+          4️⃣static func someFunc() {}
+          5️⃣init() {}
+          6️⃣subscript(index: Int) -> Element {}
+          7️⃣class SomeClass {}
+          8️⃣struct SomeStruct {}
+          9️⃣enum SomeEnum {}
+          🔟typealias Foo = Bar
         }
         """,
       expected: """
@@ -42,20 +45,49 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
           public static func someFunc() {}
           public init() {}
           public subscript(index: Int) -> Element {}
-          public protocol SomeProtocol {}
           public class SomeClass {}
           public struct SomeStruct {}
           public enum SomeEnum {}
           public typealias Foo = Bar
         }
+        """,
+      findings: [
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'public' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("3️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("4️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("5️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("6️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("7️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("8️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("9️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("🔟", message: "add 'public' access modifier to this declaration"),
+          ]
+        )
+      ]
+    )
+  }
+
+  func testRemoveRedundantInternal() {
+    assertFormatting(
+      NoAccessLevelOnExtensionDeclaration.self,
+      input: """
+        1️⃣internal extension Bar {
+          var a: Int
+          var b: Int
+        }
+        """,
+      expected: """
         extension Bar {
           var a: Int
           var b: Int
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move the 'public' access keyword to precede each member inside the extension"),
-        FindingSpec("2️⃣", message: "remove redundant 'internal' access keyword from 'Bar '"),
+        FindingSpec("1️⃣", message: "remove this redundant 'internal' access modifier from this extension")
       ]
     )
   }
@@ -66,9 +98,9 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
       input: """
         /// This doc comment should stick around.
         1️⃣public extension Foo {
-          func f() {}
+          3️⃣func f() {}
           // This should not change.
-          func g() {}
+          4️⃣func g() {}
         }
 
         /// So should this one.
@@ -94,8 +126,40 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move the 'public' access keyword to precede each member inside the extension"),
-        FindingSpec("2️⃣", message: "remove redundant 'internal' access keyword from 'Foo '"),
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'public' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("3️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("4️⃣", message: "add 'public' access modifier to this declaration"),
+          ]
+        ),
+        FindingSpec("2️⃣", message: "remove this redundant 'internal' access modifier from this extension"),
+      ]
+    )
+  }
+
+  func testPackageAccessLevel() {
+    assertFormatting(
+      NoAccessLevelOnExtensionDeclaration.self,
+      input: """
+        1️⃣package extension Foo {
+          2️⃣func f() {}
+        }
+        """,
+      expected: """
+        extension Foo {
+          package func f() {}
+        }
+        """,
+      findings: [
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'package' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'package' access modifier to this declaration")
+          ]
+        )
       ]
     )
   }
@@ -105,7 +169,7 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
       NoAccessLevelOnExtensionDeclaration.self,
       input: """
         1️⃣private extension Foo {
-          func f() {}
+          2️⃣func f() {}
         }
         """,
       expected: """
@@ -114,7 +178,14 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move the 'private' access keyword to precede each member inside the extension"),
+        FindingSpec(
+          "1️⃣",
+          message:
+            "remove this 'private' access modifier and declare each member inside this extension as 'fileprivate'",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'fileprivate' access modifier to this declaration")
+          ]
+        )
       ]
     )
   }
@@ -133,7 +204,7 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move the 'public' access keyword to precede each member inside the extension"),
+        FindingSpec("1️⃣", message: "move this 'public' access modifier to precede each member inside this extension")
       ]
     )
   }
@@ -145,17 +216,16 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
         /// This extension has a comment.
         1️⃣public extension Foo {
           /// This property has a doc comment.
-          @objc var x: Bool { get { return true }}
+          2️⃣@objc var x: Bool { get { return true }}
           // This property has a developer comment.
-          @objc static var z: Bool { get { return false }}
+          3️⃣@objc static var z: Bool { get { return false }}
           /// This static function has a doc comment.
-          @objc static func someStaticFunc() {}
-          @objc init(with foo: Foo) {}
-          @objc func someOtherFunc() {}
-          @objc protocol SomeProtocol {}
-          @objc class SomeClass : NSObject {}
-          @objc associatedtype SomeType
-          @objc enum SomeEnum : Int {
+          4️⃣@objc static func someStaticFunc() {}
+          5️⃣@objc init(with foo: Foo) {}
+          6️⃣@objc func someOtherFunc() {}
+          7️⃣@objc class SomeClass : NSObject {}
+          8️⃣@objc typealias SomeType = SomeOtherType
+          9️⃣@objc enum SomeEnum : Int {
             case SomeInt = 32
           }
         }
@@ -171,16 +241,28 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
           @objc public static func someStaticFunc() {}
           @objc public init(with foo: Foo) {}
           @objc public func someOtherFunc() {}
-          @objc public protocol SomeProtocol {}
           @objc public class SomeClass : NSObject {}
-          @objc public associatedtype SomeType
+          @objc public typealias SomeType = SomeOtherType
           @objc public enum SomeEnum : Int {
             case SomeInt = 32
           }
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move the 'public' access keyword to precede each member inside the extension"),
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'public' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("3️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("4️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("5️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("6️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("7️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("8️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("9️⃣", message: "add 'public' access modifier to this declaration"),
+          ]
+        )
       ]
     )
   }
@@ -192,25 +274,23 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
         /// This extension has a comment.
         1️⃣public extension Foo {
           /// This property has a doc comment.
-          @available(iOS 13, *)
+          2️⃣@available(iOS 13, *)
           var x: Bool { get { return true }}
           // This property has a developer comment.
-          @available(iOS 13, *)
+          3️⃣@available(iOS 13, *)
           static var z: Bool { get { return false }}
           // This static function has a developer comment.
-          @objc(someStaticFunction)
+          4️⃣@objc(someStaticFunction)
           static func someStaticFunc() {}
-          @objc(initWithFoo:)
+          5️⃣@objc(initWithFoo:)
           init(with foo: Foo) {}
-          @objc
+          6️⃣@objc
           func someOtherFunc() {}
-          @objc
-          protocol SomeProtocol {}
-          @objc
+          7️⃣@objc
           class SomeClass : NSObject {}
-          @available(iOS 13, *)
-          associatedtype SomeType
-          @objc
+          8️⃣@available(iOS 13, *)
+          typealias SomeType = SomeOtherType
+          9️⃣@objc
           enum SomeEnum : Int {
             case SomeInt = 32
           }
@@ -241,11 +321,9 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
           @objc
           public func someOtherFunc() {}
           @objc
-          public protocol SomeProtocol {}
-          @objc
           public class SomeClass : NSObject {}
           @available(iOS 13, *)
-          public associatedtype SomeType
+          public typealias SomeType = SomeOtherType
           @objc
           public enum SomeEnum : Int {
             case SomeInt = 32
@@ -261,7 +339,94 @@ final class NoAccessLevelOnExtensionDeclarationTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move the 'public' access keyword to precede each member inside the extension"),
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'public' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("3️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("4️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("5️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("6️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("7️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("8️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("9️⃣", message: "add 'public' access modifier to this declaration"),
+          ]
+        )
+      ]
+    )
+  }
+
+  func testIfConfigMembers() {
+    assertFormatting(
+      NoAccessLevelOnExtensionDeclaration.self,
+      input: """
+        1️⃣public extension Foo {
+          #if os(macOS)
+            2️⃣var x: Bool
+          #else
+            3️⃣var y: String
+          #endif
+        }
+        """,
+      expected: """
+        extension Foo {
+          #if os(macOS)
+            public var x: Bool
+          #else
+            public var y: String
+          #endif
+        }
+        """,
+      findings: [
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'public' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("3️⃣", message: "add 'public' access modifier to this declaration"),
+          ]
+        )
+      ]
+    )
+  }
+
+  func testNestedExtensionsAreIgnored() {
+    assertFormatting(
+      NoAccessLevelOnExtensionDeclaration.self,
+      input: """
+        1️⃣public extension Foo {
+          2️⃣var x: Bool
+          extension Bar {
+            var y: String
+          }
+          private extension Baz {
+            var y: String
+          }
+          3️⃣var z: Float
+        }
+        """,
+      expected: """
+        extension Foo {
+          public var x: Bool
+          extension Bar {
+            var y: String
+          }
+          private extension Baz {
+            var y: String
+          }
+          public var z: Float
+        }
+        """,
+      findings: [
+        FindingSpec(
+          "1️⃣",
+          message: "move this 'public' access modifier to precede each member inside this extension",
+          notes: [
+            NoteSpec("2️⃣", message: "add 'public' access modifier to this declaration"),
+            NoteSpec("3️⃣", message: "add 'public' access modifier to this declaration"),
+          ]
+        )
       ]
     )
   }

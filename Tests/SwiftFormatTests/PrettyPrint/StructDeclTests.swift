@@ -1,4 +1,16 @@
-import SwiftFormatConfiguration
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
+import SwiftFormat
 
 final class StructDeclTests: PrettyPrintTestCase {
   func testBasicStructDeclarations() {
@@ -208,7 +220,7 @@ final class StructDeclTests: PrettyPrintTestCase {
 
   func testStructWhereClause_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       struct MyStruct<S, T> where S: Collection {
         let A: Int
         let B: Double
@@ -224,7 +236,7 @@ final class StructDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       struct MyStruct<S, T> where S: Collection {
         let A: Int
         let B: Double
@@ -295,7 +307,7 @@ final class StructDeclTests: PrettyPrintTestCase {
 
   func testStructWhereClauseWithInheritance_lineBreakBeforeEachGenericRequirement() {
     let input =
-    """
+      """
       struct MyStruct<S, T>: ProtoOne where S: Collection {
         let A: Int
         let B: Double
@@ -311,7 +323,7 @@ final class StructDeclTests: PrettyPrintTestCase {
       """
 
     let expected =
-    """
+      """
       struct MyStruct<S, T>: ProtoOne where S: Collection {
         let A: Int
         let B: Double

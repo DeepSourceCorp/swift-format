@@ -47,39 +47,44 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
 
     switch node.name.text {
     case "Array":
-      guard let typeArgument = genericArgumentList.firstAndOnly else {
+      guard case .type(let typeArgument) = genericArgumentList.firstAndOnly?.argument else {
         newNode = nil
         break
       }
       newNode = shorthandArrayType(
-        element: typeArgument.argument,
+        element: typeArgument,
         leadingTrivia: leadingTrivia,
-        trailingTrivia: trailingTrivia)
+        trailingTrivia: trailingTrivia
+      )
 
     case "Dictionary":
-      guard let typeArguments = exactlyTwoChildren(of: genericArgumentList) else {
+      guard let arguments = exactlyTwoChildren(of: genericArgumentList),
+        case (.type(let type0Argument), .type(let type1Argument)) = (arguments.0.argument, arguments.1.argument)
+      else {
         newNode = nil
         break
       }
       newNode = shorthandDictionaryType(
-        key: typeArguments.0.argument,
-        value: typeArguments.1.argument,
+        key: type0Argument,
+        value: type1Argument,
         leadingTrivia: leadingTrivia,
-        trailingTrivia: trailingTrivia)
+        trailingTrivia: trailingTrivia
+      )
 
     case "Optional":
       guard !isTypeOfUninitializedStoredVar(node) else {
         newNode = nil
         break
       }
-      guard let typeArgument = genericArgumentList.firstAndOnly else {
+      guard case .type(let typeArgument) = genericArgumentList.firstAndOnly?.argument else {
         newNode = nil
         break
       }
       newNode = shorthandOptionalType(
-        wrapping: typeArgument.argument,
+        wrapping: typeArgument,
         leadingTrivia: leadingTrivia,
-        trailingTrivia: trailingTrivia)
+        trailingTrivia: trailingTrivia
+      )
 
     default:
       newNode = nil
@@ -93,17 +98,20 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     // Even if we don't shorten this specific type that we're visiting, we may have rewritten
     // something in the generic argument list that we recursively visited, so return the original
     // node with that swapped out.
-    let result = node.with(\.genericArgumentClause, 
-      genericArgumentClause.with(\.arguments, genericArgumentList))
+    var newGenericArgumentClause = genericArgumentClause
+    newGenericArgumentClause.arguments = genericArgumentList
+
+    var result = node
+    result.genericArgumentClause = newGenericArgumentClause
     return TypeSyntax(result)
   }
 
   public override func visit(_ node: GenericSpecializationExprSyntax) -> ExprSyntax {
-    // `SpecializeExpr`s are found in the syntax tree when a generic type is encountered in an
-    // expression context, such as `Array<Int>()`. In these situations, the corresponding array and
-    // dictionary shorthand nodes will be expression nodes, not type nodes, so we may need to
-    // translate the arguments inside the generic argument list---which are types---to the
-    // appropriate equivalent.
+    // `GenericSpecializationExprSyntax`s are found in the syntax tree when a generic type is
+    // encountered in an expression context, such as `Array<Int>()`. In these situations, the
+    // corresponding array and dictionary shorthand nodes will be expression nodes, not type nodes,
+    // so we may need to translate the arguments inside the generic argument list---which are
+    // types---to the appropriate equivalent.
 
     // Ignore nodes where the expression being specialized isn't a simple identifier.
     guard let expression = node.expression.as(DeclReferenceExprSyntax.self) else {
@@ -124,46 +132,50 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
 
     // Ensure that all arguments in the clause are shortened and in the expected format by visiting
     // the argument list, first.
-    let genericArgumentList =
-      visit(node.genericArgumentClause.arguments)
+    let genericArgumentList = visit(node.genericArgumentClause.arguments)
 
     let (leadingTrivia, trailingTrivia) = boundaryTrivia(around: Syntax(node))
     let newNode: ExprSyntax?
 
     switch expression.baseName.text {
     case "Array":
-      guard let typeArgument = genericArgumentList.firstAndOnly else {
+      guard case .type(let typeArgument) = genericArgumentList.firstAndOnly?.argument else {
         newNode = nil
         break
       }
       let arrayTypeExpr = makeArrayTypeExpression(
-        elementType: typeArgument.argument,
+        elementType: typeArgument,
         leftSquare: TokenSyntax.leftSquareToken(leadingTrivia: leadingTrivia),
-        rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia))
+        rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia)
+      )
       newNode = ExprSyntax(arrayTypeExpr)
 
     case "Dictionary":
-      guard let typeArguments = exactlyTwoChildren(of: genericArgumentList) else {
+      guard let arguments = exactlyTwoChildren(of: genericArgumentList),
+        case (.type(let type0Argument), .type(let type1Argument)) = (arguments.0.argument, arguments.1.argument)
+      else {
         newNode = nil
         break
       }
       let dictTypeExpr = makeDictionaryTypeExpression(
-        keyType: typeArguments.0.argument,
-        valueType: typeArguments.1.argument,
+        keyType: type0Argument,
+        valueType: type1Argument,
         leftSquare: TokenSyntax.leftSquareToken(leadingTrivia: leadingTrivia),
         colon: TokenSyntax.colonToken(trailingTrivia: .spaces(1)),
-        rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia))
+        rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia)
+      )
       newNode = ExprSyntax(dictTypeExpr)
 
     case "Optional":
-      guard let typeArgument = genericArgumentList.firstAndOnly else {
+      guard case .type(let typeArgument) = genericArgumentList.firstAndOnly?.argument else {
         newNode = nil
         break
       }
       let optionalTypeExpr = makeOptionalTypeExpression(
-        wrapping: typeArgument.argument,
+        wrapping: typeArgument,
         leadingTrivia: leadingTrivia,
-        questionMark: TokenSyntax.postfixQuestionMarkToken(trailingTrivia: trailingTrivia))
+        questionMark: TokenSyntax.postfixQuestionMarkToken(trailingTrivia: trailingTrivia)
+      )
       newNode = ExprSyntax(optionalTypeExpr)
 
     default:
@@ -178,16 +190,16 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     // Even if we don't shorten this specific expression that we're visiting, we may have
     // rewritten something in the generic argument list that we recursively visited, so return the
     // original node with that swapped out.
-    let result = node.with(\.genericArgumentClause, 
-      node.genericArgumentClause.with(\.arguments, genericArgumentList))
+    var result = node
+    result.genericArgumentClause.arguments = genericArgumentList
     return ExprSyntax(result)
   }
 
   /// Returns the two arguments in the given argument list, if there are exactly two elements;
   /// otherwise, it returns nil.
-  private func exactlyTwoChildren(of argumentList: GenericArgumentListSyntax)
-    -> (GenericArgumentSyntax, GenericArgumentSyntax)?
-  {
+  private func exactlyTwoChildren(
+    of argumentList: GenericArgumentListSyntax
+  ) -> (GenericArgumentSyntax, GenericArgumentSyntax)? {
     var iterator = argumentList.makeIterator()
     guard let first = iterator.next() else { return nil }
     guard let second = iterator.next() else { return nil }
@@ -205,7 +217,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     let result = ArrayTypeSyntax(
       leftSquare: TokenSyntax.leftSquareToken(leadingTrivia: leadingTrivia),
       element: element,
-      rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia))
+      rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia)
+    )
     return TypeSyntax(result)
   }
 
@@ -222,7 +235,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
       key: key,
       colon: TokenSyntax.colonToken(trailingTrivia: .spaces(1)),
       value: value,
-      rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia))
+      rightSquare: TokenSyntax.rightSquareToken(trailingTrivia: trailingTrivia)
+    )
     return TypeSyntax(result)
   }
 
@@ -236,11 +250,12 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
   ) -> TypeSyntax {
     var wrappedType = wrappedType
 
-    // Function types and some-or-any types must be wrapped in parentheses before using shorthand
-    // optional syntax, otherwise the "?" will bind incorrectly (in the function case it binds to
-    // only the result, and in the some-or-any case it only binds to the child protocol). Attach the
-    // leading trivia to the left-paren that we're adding in these cases.
+    // Certain types must be wrapped in parentheses before using shorthand optional syntax to avoid
+    // the "?" from binding incorrectly when re-parsed. Attach the leading trivia to the left-paren
+    // that we're adding in these cases.
     switch Syntax(wrappedType).as(SyntaxEnum.self) {
+    case .attributedType(let attributedType):
+      wrappedType = parenthesizedType(attributedType, leadingTrivia: leadingTrivia)
     case .functionType(let functionType):
       wrappedType = parenthesizedType(functionType, leadingTrivia: leadingTrivia)
     case .someOrAnyType(let someOrAnyType):
@@ -255,7 +270,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
 
     let optionalType = OptionalTypeSyntax(
       wrappedType: wrappedType,
-      questionMark: TokenSyntax.postfixQuestionMarkToken(trailingTrivia: trailingTrivia))
+      questionMark: TokenSyntax.postfixQuestionMarkToken(trailingTrivia: trailingTrivia)
+    )
     return TypeSyntax(optionalType)
   }
 
@@ -273,9 +289,10 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     return ArrayExprSyntax(
       leftSquare: leftSquare,
       elements: ArrayElementListSyntax([
-        ArrayElementSyntax(expression: elementTypeExpr, trailingComma: nil),
+        ArrayElementSyntax(expression: elementTypeExpr, trailingComma: nil)
       ]),
-      rightSquare: rightSquare)
+      rightSquare: rightSquare
+    )
   }
 
   /// Returns a `DictionaryExprSyntax` whose single key/value pair is the expression representations
@@ -299,12 +316,14 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
         key: keyTypeExpr,
         colon: colon,
         value: valueTypeExpr,
-        trailingComma: nil),
+        trailingComma: nil
+      )
     ])
     return DictionaryExprSyntax(
       leftSquare: leftSquare,
       content: .elements(dictElementList),
-      rightSquare: rightSquare)
+      rightSquare: rightSquare
+    )
   }
 
   /// Returns an `OptionalChainingExprSyntax` whose wrapped expression is the expression
@@ -317,12 +336,11 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
   ) -> OptionalChainingExprSyntax? {
     guard var wrappedTypeExpr = expressionRepresentation(of: wrappedType) else { return nil }
 
-    // Function types and some-or-any types must be wrapped in parentheses before using shorthand
-    // optional syntax, otherwise the "?" will bind incorrectly (in the function case it binds to
-    // only the result, and in the some-or-any case it only binds to the child protocol). Attach the
-    // leading trivia to the left-paren that we're adding in these cases.
+    // Certain types must be wrapped in parentheses before using shorthand optional syntax to avoid
+    // the "?" from binding incorrectly when re-parsed. Attach the leading trivia to the left-paren
+    // that we're adding in these cases.
     switch Syntax(wrappedType).as(SyntaxEnum.self) {
-    case .functionType, .someOrAnyType:
+    case .attributedType, .functionType, .someOrAnyType:
       wrappedTypeExpr = parenthesizedExpr(wrappedTypeExpr, leadingTrivia: leadingTrivia)
     default:
       // Otherwise, the argument type can safely become an optional by simply appending a "?". If
@@ -335,7 +353,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
 
     return OptionalChainingExprSyntax(
       expression: wrappedTypeExpr,
-      questionMark: questionMark)
+      questionMark: questionMark
+    )
   }
 
   /// Returns the given type wrapped in parentheses.
@@ -347,7 +366,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     let tupleType = TupleTypeSyntax(
       leftParen: .leftParenToken(leadingTrivia: leadingTrivia),
       elements: TupleTypeElementListSyntax([tupleTypeElement]),
-      rightParen: .rightParenToken())
+      rightParen: .rightParenToken()
+    )
     return TypeSyntax(tupleType)
   }
 
@@ -360,7 +380,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     let tupleExpr = TupleExprSyntax(
       leftParen: .leftParenToken(leadingTrivia: leadingTrivia),
       elements: LabeledExprListSyntax([tupleExprElement]),
-      rightParen: .rightParenToken())
+      rightParen: .rightParenToken()
+    )
     return ExprSyntax(tupleExpr)
   }
 
@@ -375,7 +396,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     case .identifierType(let simpleTypeIdentifier):
       let identifierExpr = DeclReferenceExprSyntax(
         baseName: simpleTypeIdentifier.name,
-        argumentNames: nil)
+        argumentNames: nil
+      )
 
       // If the type has a generic argument clause, we need to construct a `SpecializeExpr` to wrap
       // the identifier and the generic arguments. Otherwise, we can return just the
@@ -384,7 +406,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
         let newGenericArgumentClause = visit(genericArgumentClause)
         let result = GenericSpecializationExprSyntax(
           expression: ExprSyntax(identifierExpr),
-          genericArgumentClause: newGenericArgumentClause)
+          genericArgumentClause: newGenericArgumentClause
+        )
         return ExprSyntax(result)
       } else {
         return ExprSyntax(identifierExpr)
@@ -405,7 +428,8 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
       let result = makeArrayTypeExpression(
         elementType: arrayType.element,
         leftSquare: arrayType.leftSquare,
-        rightSquare: arrayType.rightSquare)
+        rightSquare: arrayType.rightSquare
+      )
       return ExprSyntax(result)
 
     case .dictionaryType(let dictionaryType):
@@ -414,14 +438,16 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
         valueType: dictionaryType.value,
         leftSquare: dictionaryType.leftSquare,
         colon: dictionaryType.colon,
-        rightSquare: dictionaryType.rightSquare)
+        rightSquare: dictionaryType.rightSquare
+      )
       return ExprSyntax(result)
 
     case .optionalType(let optionalType):
       let result = makeOptionalTypeExpression(
         wrapping: optionalType.wrappedType,
         leadingTrivia: optionalType.firstToken(viewMode: .sourceAccurate)?.leadingTrivia ?? [],
-        questionMark: optionalType.questionMark)
+        questionMark: optionalType.questionMark
+      )
       return ExprSyntax(result)
 
     case .functionType(let functionType):
@@ -440,20 +466,24 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
       let result = TupleExprSyntax(
         leftParen: tupleType.leftParen,
         elements: elementExprs,
-        rightParen: tupleType.rightParen)
+        rightParen: tupleType.rightParen
+      )
       return ExprSyntax(result)
 
     case .someOrAnyType(let someOrAnyType):
       return ExprSyntax(TypeExprSyntax(type: someOrAnyType))
+
+    case .attributedType(let attributedType):
+      return ExprSyntax(TypeExprSyntax(type: attributedType))
 
     default:
       return nil
     }
   }
 
-  private func expressionRepresentation(of tupleTypeElements: TupleTypeElementListSyntax)
-    -> LabeledExprListSyntax?
-  {
+  private func expressionRepresentation(
+    of tupleTypeElements: TupleTypeElementListSyntax
+  ) -> LabeledExprListSyntax? {
     guard !tupleTypeElements.isEmpty else { return nil }
 
     var exprElements = [LabeledExprSyntax]()
@@ -464,7 +494,9 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
           label: typeElement.firstName,
           colon: typeElement.colon,
           expression: elementExpr,
-          trailingComma: typeElement.trailingComma))
+          trailingComma: typeElement.trailingComma
+        )
+      )
     }
     return LabeledExprListSyntax(exprElements)
   }
@@ -476,7 +508,7 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     effectSpecifiers: TypeEffectSpecifiersSyntax?,
     arrow: TokenSyntax,
     returnType: TypeSyntax
-  ) -> SequenceExprSyntax? {
+  ) -> InfixOperatorExprSyntax? {
     guard
       let parameterExprs = expressionRepresentation(of: parameters),
       let returnTypeExpr = expressionRepresentation(of: returnType)
@@ -487,24 +519,26 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
     let tupleExpr = TupleExprSyntax(
       leftParen: leftParen,
       elements: parameterExprs,
-      rightParen: rightParen)
+      rightParen: rightParen
+    )
     let arrowExpr = ArrowExprSyntax(
       effectSpecifiers: effectSpecifiers,
-      arrow: arrow)
-
-    return SequenceExprSyntax(
-      elements: ExprListSyntax([
-        ExprSyntax(tupleExpr), ExprSyntax(arrowExpr), returnTypeExpr,
-      ]))
+      arrow: arrow
+    )
+    return InfixOperatorExprSyntax(
+      leftOperand: tupleExpr,
+      operator: arrowExpr,
+      rightOperand: returnTypeExpr
+    )
   }
 
   /// Returns the leading and trailing trivia from the front and end of the entire given node.
   ///
   /// In other words, this is the leading trivia from the first token of the node and the trailing
   /// trivia from the last token.
-  private func boundaryTrivia(around node: Syntax)
-    -> (leadingTrivia: Trivia, trailingTrivia: Trivia)
-  {
+  private func boundaryTrivia(
+    around node: Syntax
+  ) -> (leadingTrivia: Trivia, trailingTrivia: Trivia) {
     return (
       leadingTrivia: node.firstToken(viewMode: .sourceAccurate)?.leadingTrivia ?? [],
       trailingTrivia: node.lastToken(viewMode: .sourceAccurate)?.trailingTrivia ?? []
@@ -554,7 +588,7 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
       isStoredProperty(patternBinding),
       patternBinding.initializer == nil,
       let variableDecl = nearestAncestor(of: patternBinding, type: VariableDeclSyntax.self),
-       variableDecl.bindingSpecifier.tokenKind == .keyword(.var)
+      variableDecl.bindingSpecifier.tokenKind == .keyword(.var)
     {
       return true
     }
@@ -578,8 +612,7 @@ public final class UseShorthandTypeNames: SyntaxFormatRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static func useTypeShorthand(type: String) -> Finding.Message {
+  fileprivate static func useTypeShorthand(type: String) -> Finding.Message {
     "use shorthand syntax for this '\(type)' type"
   }
 }

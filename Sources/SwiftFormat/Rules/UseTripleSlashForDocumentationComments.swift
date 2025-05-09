@@ -80,6 +80,8 @@ public final class UseTripleSlashForDocumentationComments: SyntaxFormatRule {
       return decl
     }
 
+    diagnose(.avoidDocBlockComment, on: decl, anchor: .leadingTrivia(commentInfo.startIndex))
+
     // Keep any trivia leading up to the doc comment.
     var pieces = Array(decl.leadingTrivia[..<commentInfo.startIndex])
 
@@ -107,7 +109,6 @@ public final class UseTripleSlashForDocumentationComments: SyntaxFormatRule {
 }
 
 extension Finding.Message {
-  @_spi(Rules)
-  public static let avoidDocBlockComment: Finding.Message =
+  fileprivate static let avoidDocBlockComment: Finding.Message =
     "replace documentation block comments with documentation line comments"
 }

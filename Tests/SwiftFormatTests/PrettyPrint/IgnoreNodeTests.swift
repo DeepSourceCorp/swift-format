@@ -1,5 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 final class IgnoreNodeTests: PrettyPrintTestCase {
-  func atestIgnoreCodeBlockListItems() {
+  func testIgnoreCodeBlockListItems() {
     let input =
       """
             x      = 4       + 5 // This comment stays here.
@@ -227,7 +239,7 @@ final class IgnoreNodeTests: PrettyPrintTestCase {
 
       """
 
-       assertPrettyPrintEqual(input: input, expected: expected, linelength: 50)
+    assertPrettyPrintEqual(input: input, expected: expected, linelength: 50)
   }
 
   func testValidComment() {
@@ -318,36 +330,18 @@ final class IgnoreNodeTests: PrettyPrintTestCase {
       {
         var bazzle = 0 }
       """
+    assertPrettyPrintEqual(input: input, expected: input, linelength: 50)
+  }
 
-    let expected =
+  func testIgnoreWholeFileDoesNotTouchWhitespace() {
+    let input =
       """
       // swift-format-ignore-file
-      import Zoo
-      import Aoo
-      import foo
-
-          struct Foo {
-            private var baz: Bool {
-                return foo +
-                 bar + // poorly placed comment
-                  false
-            }
-
-            var a = true    // line comment
-                            // aligned line comment
-            var b = false  // correct trailing comment
-
-      var c = 0 +
-          1
-          + (2 + 3)
-      }
-
-            class Bar
-      {
-        var bazzle = 0 }
+      /// foo bar
+      \u{0020}
+      // baz
       """
-
-    assertPrettyPrintEqual(input: input, expected: expected, linelength: 50)
+    assertPrettyPrintEqual(input: input, expected: input, linelength: 100)
   }
 
   func testIgnoreWholeFileInNestedNode() {

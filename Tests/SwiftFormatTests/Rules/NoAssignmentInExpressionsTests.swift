@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
   func testAssignmentInExpressionContextIsDiagnosed() {
@@ -13,7 +24,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         foo(bar, baz = quux, a + b)
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -69,7 +80,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -89,7 +100,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -111,7 +122,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -131,7 +142,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -151,7 +162,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -171,7 +182,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }
@@ -221,7 +232,7 @@ final class NoAssignmentInExpressionsTests: LintOrFormatRuleTestCase {
         someRegularFunction(a = b)
         """,
       findings: [
-        FindingSpec("1️⃣", message: "move this assignment expression into its own statement"),
+        FindingSpec("1️⃣", message: "move this assignment expression into its own statement")
       ]
     )
   }

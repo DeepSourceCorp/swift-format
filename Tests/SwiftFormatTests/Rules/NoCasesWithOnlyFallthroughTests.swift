@@ -1,6 +1,17 @@
-import _SwiftFormatTestSupport
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2025 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
 
 @_spi(Rules) import SwiftFormat
+import _SwiftFormatTestSupport
 
 final class NoCasesWithOnlyFallthroughTests: LintOrFormatRuleTestCase {
   func testFallthroughCases() {
@@ -147,7 +158,6 @@ final class NoCasesWithOnlyFallthroughTests: LintOrFormatRuleTestCase {
   }
 
   func testNestedSwitches() {
-    // FIXME: Finding #3 is at an odd column; it should be before the `case`. Look into this.
     assertFormatting(
       NoCasesWithOnlyFallthrough.self,
       input: """
@@ -156,7 +166,7 @@ final class NoCasesWithOnlyFallthroughTests: LintOrFormatRuleTestCase {
         2️⃣case 2: fallthrough
         case 3:
           switch y {
-          case 13️⃣: fallthrough
+          3️⃣case 1: fallthrough
           case 2: print(2)
           }
         case 4:
@@ -331,7 +341,7 @@ final class NoCasesWithOnlyFallthroughTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "combine this fallthrough-only 'case' and the following 'case' into a single 'case'"),
+        FindingSpec("1️⃣", message: "combine this fallthrough-only 'case' and the following 'case' into a single 'case'")
       ]
     )
   }
@@ -353,7 +363,7 @@ final class NoCasesWithOnlyFallthroughTests: LintOrFormatRuleTestCase {
         }
         """,
       findings: [
-        FindingSpec("1️⃣", message: "combine this fallthrough-only 'case' and the following 'case' into a single 'case'"),
+        FindingSpec("1️⃣", message: "combine this fallthrough-only 'case' and the following 'case' into a single 'case'")
       ]
     )
   }
