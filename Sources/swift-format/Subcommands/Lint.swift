@@ -17,23 +17,29 @@ extension SwiftFormatCommand {
   struct Lint: ParsableCommand {
     static var configuration = CommandConfiguration(
       abstract: "Diagnose style issues in Swift source code",
-      discussion: "When no files are specified, it expects the source from standard input.")
+      discussion: "When no files are specified, it expects the source from standard input."
+    )
 
     @OptionGroup()
     var lintOptions: LintFormatOptions
-    
+
     @Flag(
       name: .shortAndLong,
       help: "Fail on warnings."
     )
     var strict: Bool = false
 
-    func run() throws {
-      let frontend = LintFrontend(lintFormatOptions: lintOptions)
-      frontend.run()
+    @OptionGroup(visibility: .hidden)
+    var performanceMeasurementOptions: PerformanceMeasurementsOptions
 
-      if frontend.diagnosticsEngine.hasErrors || strict && frontend.diagnosticsEngine.hasWarnings {
-        throw ExitCode.failure
+    func run() throws {
+      try performanceMeasurementOptions.printingInstructionCountIfRequested {
+        let frontend = LintFrontend(lintFormatOptions: lintOptions)
+        frontend.run()
+
+        if frontend.diagnosticsEngine.hasErrors || strict && frontend.diagnosticsEngine.hasWarnings {
+          throw ExitCode.failure
+        }
       }
     }
   }
