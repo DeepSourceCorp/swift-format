@@ -1,5 +1,5 @@
 # Build
-timeout: 40m0s
+timeout: 60m0s
 steps:
   - name: "gcr.io/cloud-builders/docker"
     args:
