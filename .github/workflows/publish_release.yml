@@ -27,7 +27,7 @@ jobs:
     name: Check user is allowed to create release
     # Only a single user should be allowed to create releases to avoid two people triggering the creation of a release
     # at the same time. If the release manager changes between users, update this condition.
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - run: |
           if [[ "${{ github.triggering_actor }}" != "ahoppen" ]]; then
@@ -36,7 +36,7 @@ jobs:
           fi
   create_release_commits:
     name: Create release commits
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       swift_format_version: ${{ steps.swift_format_version.outputs.swift_format_version }}
       release_commit_patch: ${{ steps.create_release_commits.outputs.release_commit_patch }}
@@ -120,7 +120,7 @@ jobs:
       windows_build_command: swift test -Xswiftc -warnings-as-errors ${{ matrix.release && '-c release' || '' }}
   create_tag:
     name: Create Tag
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [check_triggering_actor, test, create_release_commits]
     permissions:
       contents: write
